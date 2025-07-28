@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Model Viewer Test</title>
+    <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+    <style>
+      body { background: #222; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; }
+    </style>
+  </head>
+  <body>
+    <h1>Ready Player Me Avatar Test</h1>
+    <model-viewer
+      src="https://models.readyplayer.me/6880d2d61f1087112a37ef6a.glb"
+      alt="Ready Player Me Avatar"
+      camera-controls
+      auto-rotate
+      style="width: 350px; height: 500px; background: transparent;"
+      exposure="1.1"
+      shadow-intensity="1"
+      ar
+    >
+      <div slot="poster">Loading avatar...</div>
+      <div slot="fallback">Your browser does not support 3D models.</div>
+    </model-viewer>
+    <p>If you see your avatar above, 3D is working. If not, please report the error message.</p>
+  </body>
+</html> 

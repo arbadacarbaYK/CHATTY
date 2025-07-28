@@ -1,0 +1,11 @@
+{
+  "files": [],
+  "include": [
+    "src",
+    "src/custom-elements.d.ts"
+  ],
+  "references": [
+    { "path": "./tsconfig.app.json" },
+    { "path": "./tsconfig.node.json" }
+  ]
+}
