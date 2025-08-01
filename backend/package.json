@@ -9,7 +9,7 @@
     "cheerio": "^1.1.2",
     "cookie-parser": "~1.4.4",
     "debug": "~2.6.9",
-    "express": "~4.16.1",
+    "express": "~4.21.2",
     "express-session": "^1.18.0",
     "https": "^1.0.0",
     "keyword-extractor": "^0.0.28",
