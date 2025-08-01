@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      '/api': {
+      '/api/generate': {
         target: 'http://localhost:11434',
         changeOrigin: true,
         secure: false,
@@ -24,10 +24,21 @@ export default defineConfig({
           });
         }
       },
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        secure: false,
+      },
       '/knowledge': {
         target: 'http://localhost:3000',
         changeOrigin: true,
         secure: false,
+      },
+      '/chat': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        secure: false,
+        timeout: 120000, // 2 minutes timeout for chat responses
       }
     }
   }

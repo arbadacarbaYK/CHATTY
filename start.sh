@@ -23,7 +23,7 @@ NC='\033[0m' # No Color
 
 # Configuration
 BACKEND_PORT=3000
-FRONTEND_PORT=5174
+FRONTEND_PORT=5173
 OLLAMA_PORT=11434
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKEND_DIR="$PROJECT_DIR/backend"
@@ -32,6 +32,67 @@ PID_DIR="$PROJECT_DIR/pids"
 
 # Create necessary directories
 mkdir -p "$LOG_DIR" "$PID_DIR"
+
+# Environment detection and configuration
+detect_environment() {
+    if [ -z "$NODE_ENV" ]; then
+        echo -e "\n${BLUE}=== Environment Detection ===${NC}"
+        echo "1) Development (localhost)"
+        echo "2) Production (webserver)"
+        echo -n "Choose deployment type (1-2): "
+        read -r choice
+        
+        case $choice in
+            1) export NODE_ENV=development ;;
+            2) export NODE_ENV=production ;;
+            *) echo "Invalid choice, defaulting to development"; export NODE_ENV=development ;;
+        esac
+        
+        echo "✅ Environment: $NODE_ENV"
+    fi
+}
+
+# Setup session configuration based on environment
+setup_session_config() {
+    log "${GREEN}Setting up session configuration for $NODE_ENV...${NC}"
+    
+    # Create .env file if it doesn't exist
+    if [ ! -f "$PROJECT_DIR/.env" ]; then
+        cp "$PROJECT_DIR/env.example" "$PROJECT_DIR/.env" 2>/dev/null || true
+    fi
+    
+    # Generate session secret if not set
+    if ! grep -q "SESSION_SECRET" "$PROJECT_DIR/.env" 2>/dev/null || grep -q "SESSION_SECRET=.*secret-key" "$PROJECT_DIR/.env" 2>/dev/null; then
+        SESSION_SECRET=$(openssl rand -hex 32 2>/dev/null || echo "bitcoin-edu-roleplay-$(date +%s)-$(openssl rand -hex 16 2>/dev/null || echo $RANDOM)")
+        
+        if [ -f "$PROJECT_DIR/.env" ]; then
+            # Update existing .env
+            sed -i "s/SESSION_SECRET=.*/SESSION_SECRET=$SESSION_SECRET/" "$PROJECT_DIR/.env" 2>/dev/null || true
+        else
+            # Create new .env
+            echo "SESSION_SECRET=$SESSION_SECRET" > "$PROJECT_DIR/.env"
+        fi
+        
+        log "✅ Generated session secret"
+    fi
+    
+    # Set environment-specific session settings
+    if [ "$NODE_ENV" = "production" ]; then
+        # Production: secure cookies, longer sessions
+        export SESSION_SECURE_COOKIES=true
+        export SESSION_HTTP_ONLY=true
+        export SESSION_SAME_SITE=strict
+        export SESSION_MAX_AGE=86400000  # 24 hours
+        log "✅ Production session settings: secure cookies, 24h sessions"
+    else
+        # Development: regular cookies, shorter sessions
+        export SESSION_SECURE_COOKIES=false
+        export SESSION_HTTP_ONLY=true
+        export SESSION_SAME_SITE=lax
+        export SESSION_MAX_AGE=3600000  # 1 hour
+        log "✅ Development session settings: regular cookies, 1h sessions"
+    fi
+}
 
 # Function to log messages
 log() {
@@ -81,10 +142,18 @@ check_service_health() {
 start_ollama() {
     log "${GREEN}Starting Ollama...${NC}"
     
-    # Check if Ollama is already running
+    # Check if Ollama is already running and actually responding
     if is_port_in_use $OLLAMA_PORT; then
-        log "${YELLOW}Ollama is already running on port $OLLAMA_PORT${NC}"
-        return 0
+        local health_result=$(check_service_health "http://localhost:$OLLAMA_PORT/api/tags" "Ollama" 5)
+        if [ "$health_result" = "true" ]; then
+            log "${YELLOW}Ollama is already running and healthy on port $OLLAMA_PORT${NC}"
+            return 0
+        else
+            log "${YELLOW}Ollama port is in use but not responding, trying to restart...${NC}"
+            # Don't kill ollama if it's running as a different user
+            log "${YELLOW}Ollama may be running as system service, continuing...${NC}"
+            return 0
+        fi
     fi
     
     # Start Ollama in background
@@ -92,19 +161,28 @@ start_ollama() {
     local ollama_pid=$!
     echo $ollama_pid > "$PID_DIR/ollama.pid"
     
-    # Wait for Ollama to start
+    # Wait for Ollama to start - give it more time
     log "Waiting for Ollama to start..."
     local attempts=0
-    while [ $attempts -lt 30 ]; do
-        if check_service_health "http://localhost:$OLLAMA_PORT/api/tags" "Ollama" 2; then
+    while [ $attempts -lt 60 ]; do
+        # First check if process is still alive
+        if ! kill -0 "$ollama_pid" 2>/dev/null; then
+            log "${RED}Ollama process died during startup${NC}"
+            return 1
+        fi
+        
+        # Then check if it's responding
+        local health_result=$(check_service_health "http://localhost:$OLLAMA_PORT/api/tags" "Ollama" 10)
+        if [ "$health_result" = "true" ]; then
             log "${GREEN}Ollama started successfully (PID: $ollama_pid)${NC}"
             return 0
         fi
-        sleep 1
+        
+        sleep 5
         ((attempts++))
     done
     
-    log "${RED}Failed to start Ollama${NC}"
+    log "${RED}Failed to start Ollama after 5 minutes${NC}"
     return 1
 }
 
@@ -131,7 +209,8 @@ start_backend() {
     log "Waiting for Backend to start..."
     local attempts=0
     while [ $attempts -lt 30 ]; do
-        if check_service_health "http://localhost:$BACKEND_PORT/knowledge/all" "Backend" 2; then
+        local health_result=$(check_service_health "http://localhost:$BACKEND_PORT/knowledge/all" "Backend" 2)
+        if [ "$health_result" = "true" ]; then
             log "${GREEN}Backend started successfully (PID: $backend_pid)${NC}"
             return 0
         fi
@@ -162,11 +241,15 @@ start_frontend() {
     local frontend_pid=$!
     echo $frontend_pid > "$PID_DIR/frontend.pid"
     
+    # Wait a moment for the process to start
+    sleep 2
+    
     # Wait for frontend to start
     log "Waiting for Frontend to start..."
     local attempts=0
     while [ $attempts -lt 30 ]; do
-        if check_service_health "http://localhost:$FRONTEND_PORT" "Frontend" 2; then
+        local health_result=$(check_service_health "http://localhost:$FRONTEND_PORT" "Frontend" 2)
+        if [ "$health_result" = "true" ]; then
             log "${GREEN}Frontend started successfully (PID: $frontend_pid)${NC}"
             return 0
         fi
@@ -182,21 +265,22 @@ start_frontend() {
 monitor_services() {
     log "${GREEN}Starting service monitor...${NC}"
     
+    # Wait for initial startup before monitoring
+    sleep 60
+    
     while true; do
-        # Check Ollama
-        if [ -f "$PID_DIR/ollama.pid" ]; then
-            local ollama_pid=$(cat "$PID_DIR/ollama.pid")
-            if ! kill -0 "$ollama_pid" 2>/dev/null || ! check_service_health "http://localhost:$OLLAMA_PORT/api/tags" "Ollama" 2; then
-                log "${YELLOW}Ollama health check failed, restarting...${NC}"
-                start_ollama
-            fi
+        # Check Ollama - only restart if port is not responding
+        local ollama_health=$(check_service_health "http://localhost:$OLLAMA_PORT/api/tags" "Ollama" 5)
+        if [ "$ollama_health" != "true" ]; then
+            log "${YELLOW}Ollama not responding, restarting...${NC}"
+            start_ollama
         fi
         
         # Check Backend
         if [ -f "$PID_DIR/backend.pid" ]; then
             local backend_pid=$(cat "$PID_DIR/backend.pid")
-            if ! kill -0 "$backend_pid" 2>/dev/null || ! check_service_health "http://localhost:$BACKEND_PORT/knowledge/all" "Backend" 2; then
-                log "${YELLOW}Backend health check failed, restarting...${NC}"
+            if ! kill -0 "$backend_pid" 2>/dev/null; then
+                log "${YELLOW}Backend process died, restarting...${NC}"
                 start_backend
             fi
         fi
@@ -204,8 +288,8 @@ monitor_services() {
         # Check Frontend
         if [ -f "$PID_DIR/frontend.pid" ]; then
             local frontend_pid=$(cat "$PID_DIR/frontend.pid")
-            if ! kill -0 "$frontend_pid" 2>/dev/null || ! check_service_health "http://localhost:$FRONTEND_PORT" "Frontend" 2; then
-                log "${YELLOW}Frontend health check failed, restarting...${NC}"
+            if ! kill -0 "$frontend_pid" 2>/dev/null; then
+                log "${YELLOW}Frontend process died, restarting...${NC}"
                 start_frontend
             fi
         fi
@@ -231,17 +315,9 @@ show_status() {
     echo -e "\n${BLUE}=== Service Status ===${NC}"
     
     # Ollama
-    if [ -f "$PID_DIR/ollama.pid" ]; then
-        local pid=$(cat "$PID_DIR/ollama.pid")
-        if kill -0 "$pid" 2>/dev/null; then
-            if check_service_health "http://localhost:$OLLAMA_PORT/api/tags" "Ollama" 2; then
-                echo -e "${GREEN}✓ Ollama: Running (PID: $pid)${NC}"
-            else
-                echo -e "${YELLOW}⚠ Ollama: Running but unhealthy (PID: $pid)${NC}"
-            fi
-        else
-            echo -e "${RED}✗ Ollama: Not running${NC}"
-        fi
+    local ollama_health=$(check_service_health "http://localhost:$OLLAMA_PORT/api/tags" "Ollama" 2)
+    if [ "$ollama_health" = "true" ]; then
+        echo -e "${GREEN}✓ Ollama: Running${NC}"
     else
         echo -e "${RED}✗ Ollama: Not running${NC}"
     fi
@@ -250,7 +326,8 @@ show_status() {
     if [ -f "$PID_DIR/backend.pid" ]; then
         local pid=$(cat "$PID_DIR/backend.pid")
         if kill -0 "$pid" 2>/dev/null; then
-            if check_service_health "http://localhost:$BACKEND_PORT/knowledge/all" "Backend" 2; then
+            local health=$(check_service_health "http://localhost:$BACKEND_PORT/knowledge/all" "Backend" 2)
+            if [ "$health" = "true" ]; then
                 echo -e "${GREEN}✓ Backend: Running (PID: $pid)${NC}"
             else
                 echo -e "${YELLOW}⚠ Backend: Running but unhealthy (PID: $pid)${NC}"
@@ -266,7 +343,8 @@ show_status() {
     if [ -f "$PID_DIR/frontend.pid" ]; then
         local pid=$(cat "$PID_DIR/frontend.pid")
         if kill -0 "$pid" 2>/dev/null; then
-            if check_service_health "http://localhost:$FRONTEND_PORT" "Frontend" 2; then
+            local health=$(check_service_health "http://localhost:$FRONTEND_PORT" "Frontend" 2)
+            if [ "$health" = "true" ]; then
                 echo -e "${GREEN}✓ Frontend: Running (PID: $pid)${NC}"
             else
                 echo -e "${YELLOW}⚠ Frontend: Running but unhealthy (PID: $pid)${NC}"
@@ -291,6 +369,10 @@ case "${1:-start}" in
         
         # Stop any existing services first
         stop_all
+        
+        # Detect and setup environment
+        detect_environment
+        setup_session_config
         
         # Start services
         start_ollama || exit 1

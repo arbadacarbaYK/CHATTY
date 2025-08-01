@@ -1,0 +1,253 @@
+nohup: ignoring input
+New user session created: 0935d0ce-b567-4d1f-be62-22b5caa8d37b
+Searching knowledge base for: Tell me about Bitcoin
+New user session created: b60218aa-d2d4-4be7-b607-f63f2ccd0c45
+[0mGET /knowledge/search?q=Tell%20me%20about%20Bitcoin [32m200 [0m9.241 ms - 14[0m
+Knowledge search results: { results: [] }
+New user session created: a8bdb436-706c-4391-a066-ea4f112f47bb
+[0mGET /knowledge/search?q=bitcoin [32m200 [0m2.603 ms - 6693[0m
+Broader knowledge context added: 
+
+- GitHub - bitcoin/bips: Bitcoin Improvement Proposals.
+New user session created: 0783e807-15c3-42fc-93f1-5493a308af84
+[0mGET /chat/health [36m304 [0m12.464 ms - -[0m
+[0mGET /knowledge/all [36m304 [0m15.937 ms - -[0m
+Chat error: AxiosError: timeout of 60000ms exceeded
+    at RedirectableRequest.handleRequestTimeout (/home/arbadacarba/Downloads/bitcoin-edu-roleplay/node_modules/axios/dist/node/axios.cjs:3228:16)
+    at RedirectableRequest.emit (node:events:524:28)
+    at Timeout.<anonymous> (/home/arbadacarba/Downloads/bitcoin-edu-roleplay/node_modules/follow-redirects/index.js:221:12)
+    at listOnTimeout (node:internal/timers:581:17)
+    at process.processTimers (node:internal/timers:519:7)
+    at Axios.request (/home/arbadacarba/Downloads/bitcoin-edu-roleplay/node_modules/axios/dist/node/axios.cjs:4280:41)
+    at runNextTicks (node:internal/process/task_queues:60:5)
+    at listOnTimeout (node:internal/timers:545:9)
+    at process.processTimers (node:internal/timers:519:7)
+    at async /home/arbadacarba/Downloads/bitcoin-edu-roleplay/backend/routes/chat.js:183:28 {
+  code: 'ECONNABORTED',
+  config: {
+    transitional: {
+      silentJSONParsing: true,
+      forcedJSONParsing: true,
+      clarifyTimeoutError: false
+    },
+    adapter: [ 'xhr', 'http', 'fetch' ],
+    transformRequest: [ [Function: transformRequest] ],
+    transformResponse: [ [Function: transformResponse] ],
+    timeout: 60000,
+    xsrfCookieName: 'XSRF-TOKEN',
+    xsrfHeaderName: 'X-XSRF-TOKEN',
+    maxContentLength: -1,
+    maxBodyLength: -1,
+    env: { FormData: [Function [FormData]], Blob: [class Blob] },
+    validateStatus: [Function: validateStatus],
+    headers: Object [AxiosHeaders] {
+      Accept: 'application/json, text/plain, */*',
+      'Content-Type': 'application/json',
+      'User-Agent': 'axios/1.10.0',
+      'Content-Length': '450',
+      'Accept-Encoding': 'gzip, compress, deflate, br'
+    },
+    method: 'post',
+    url: 'http://localhost:11434/api/generate',
+    data: '{"model":"llama3.2:1b","prompt":"You are Satoshi, a Bitcoin education guide. Bitcoin generalist. Provide broad overviews of Bitcoin, Lightning, Cashu, Nostr. Keep responses accessible and encouraging.\\n\\nKNOWLEDGE:\\n\\n- GitHub - bitcoin/bips: Bitcoin Improvement Proposals.\\n\\nUser: Tell me about Bitcoin\\n\\nSatoshi:","stream":false,"options":{"num_predict":32,"temperature":0.3,"top_p":0.5,"repeat_penalty":1,"top_k":5,"num_ctx":256,"num_thread":8}}',
+    allowAbsoluteUrls: true
+  },
+  request: <ref *1> Writable {
+    _events: {
+      close: undefined,
+      error: [Function: handleRequestError],
+      prefinish: undefined,
+      finish: undefined,
+      drain: undefined,
+      response: [Function: handleResponse],
+      socket: [Array],
+      timeout: undefined,
+      abort: undefined
+    },
+    _writableState: WritableState {
+      highWaterMark: 16384,
+      length: 0,
+      corked: 0,
+      onwrite: [Function: bound onwrite],
+      writelen: 0,
+      bufferedIndex: 0,
+      pendingcb: 0,
+      [Symbol(kState)]: 17580812,
+      [Symbol(kBufferedValue)]: null
+    },
+    _maxListeners: undefined,
+    _options: {
+      maxRedirects: 21,
+      maxBodyLength: Infinity,
+      protocol: 'http:',
+      path: '/api/generate',
+      method: 'POST',
+      headers: [Object: null prototype],
+      agents: [Object],
+      auth: undefined,
+      family: undefined,
+      beforeRedirect: [Function: dispatchBeforeRedirect],
+      beforeRedirects: [Object],
+      hostname: 'localhost',
+      port: '11434',
+      agent: undefined,
+      nativeProtocols: [Object],
+      pathname: '/api/generate'
+    },
+    _ended: true,
+    _ending: true,
+    _redirectCount: 0,
+    _redirects: [],
+    _requestBodyLength: 450,
+    _requestBodyBuffers: [ [Object] ],
+    _eventsCount: 3,
+    _onNativeResponse: [Function (anonymous)],
+    _currentRequest: ClientRequest {
+      _events: [Object: null prototype],
+      _eventsCount: 7,
+      _maxListeners: undefined,
+      outputData: [],
+      outputSize: 0,
+      writable: true,
+      destroyed: false,
+      _last: false,
+      chunkedEncoding: false,
+      shouldKeepAlive: true,
+      maxRequestsOnConnectionReached: false,
+      _defaultKeepAlive: true,
+      useChunkedEncodingByDefault: true,
+      sendDate: false,
+      _removedConnection: false,
+      _removedContLen: false,
+      _removedTE: false,
+      strictContentLength: false,
+      _contentLength: '450',
+      _hasBody: true,
+      _trailer: '',
+      finished: true,
+      _headerSent: true,
+      _closed: false,
+      socket: [Socket],
+      _header: 'POST /api/generate HTTP/1.1\r\n' +
+        'Accept: application/json, text/plain, */*\r\n' +
+        'Content-Type: application/json\r\n' +
+        'User-Agent: axios/1.10.0\r\n' +
+        'Content-Length: 450\r\n' +
+        'Accept-Encoding: gzip, compress, deflate, br\r\n' +
+        'Host: localhost:11434\r\n' +
+        'Connection: keep-alive\r\n' +
+        '\r\n',
+      _keepAliveTimeout: 0,
+      _onPendingData: [Function: nop],
+      agent: [Agent],
+      socketPath: undefined,
+      method: 'POST',
+      maxHeaderSize: undefined,
+      insecureHTTPParser: undefined,
+      joinDuplicateHeaders: undefined,
+      path: '/api/generate',
+      _ended: false,
+      res: null,
+      aborted: false,
+      timeoutCb: [Function: emitRequestTimeout],
+      upgradeOrConnect: false,
+      parser: [HTTPParser],
+      maxHeadersCount: null,
+      reusedSocket: false,
+      host: 'localhost',
+      protocol: 'http:',
+      _redirectable: [Circular *1],
+      [Symbol(shapeMode)]: false,
+      [Symbol(kCapture)]: false,
+      [Symbol(kBytesWritten)]: 0,
+      [Symbol(kNeedDrain)]: false,
+      [Symbol(corked)]: 0,
+      [Symbol(kOutHeaders)]: [Object: null prototype],
+      [Symbol(errored)]: null,
+      [Symbol(kHighWaterMark)]: 16384,
+      [Symbol(kRejectNonStandardBodyWrites)]: false,
+      [Symbol(kUniqueHeaders)]: null
+    },
+    _currentUrl: 'http://localhost:11434/api/generate',
+    _timeout: null,
+    [Symbol(shapeMode)]: true,
+    [Symbol(kCapture)]: false
+  }
+}
+[0mPOST /chat/message [31m500 [0m60159.403 ms - 55[0m
+[0mGET /chat/health [36m304 [0m11.423 ms - -[0m
+[0mGET /knowledge/all [36m304 [0m9.434 ms - -[0m
+[0mGET /chat/health [36m304 [0m8.010 ms - -[0m
+[0mGET /knowledge/all [36m304 [0m6.931 ms - -[0m
+New user session created: 19603f72-58ab-4ae3-9e5f-a993d94b35ac
+[0mPOST /knowledge/add [32m200 [0m12.691 ms - 23[0m
+New user session created: 8a335049-626e-4b95-a292-bfc78b85b5d7
+[0mPOST /knowledge/crawl [32m200 [0m8829.580 ms - 143[0m
+New user session created: b9d5e4ff-e56d-45a4-85cb-e7e4cdecfc6c
+[0mGET /knowledge/all [32m200 [0m3.075 ms - 85636[0m
+New user session created: a80bf8bd-cfb4-411c-9d08-3131e040b413
+[0mGET /knowledge/all [32m200 [0m3.198 ms - 85636[0m
+New user session created: 09c0cc0e-ba49-446b-b259-bd6a6126f917
+[0mPOST /knowledge/add [32m200 [0m12.943 ms - 23[0m
+New user session created: efdfa021-9d5a-4b20-b4ca-627cd495a468
+[0mPOST /knowledge/crawl [32m200 [0m2135.692 ms - 143[0m
+[0mGET /chat/health [36m304 [0m3.773 ms - -[0m
+[0mGET /knowledge/all [32m200 [0m2.648 ms - 85636[0m
+New user session created: 5f783a88-0cc3-48c5-96fa-fdb61e6c0c51
+[0mGET /knowledge/search?q=bitcoin [32m200 [0m2.640 ms - 6693[0m
+New user session created: 3b5f112d-3d32-4d95-817c-8866b7ad751c
+[0mGET /knowledge/search?q=bips [32m200 [0m1.635 ms - 272[0m
+New user session created: d87938ea-cb40-4d2d-8743-5e66a48a7488
+[0mGET /knowledge/search?q=bips [32m200 [0m1.476 ms - 272[0m
+New user session created: e21e9295-f7d5-469a-983d-54ce5d9f3fd5
+[0mPOST /knowledge/update [33m404 [0m1.613 ms - 156[0m
+New user session created: 96b09d0a-833e-4faa-9480-b0224e412bfd
+[0mPOST /knowledge/add [32m200 [0m12.578 ms - 23[0m
+New user session created: a6905f40-d6be-436a-ba76-e336d56c5a28
+[0mGET /knowledge/search?q=bips [32m200 [0m1.587 ms - 272[0m
+New user session created: 71dc6555-5632-44c6-9a2d-d438314f691a
+[0mGET /knowledge/search?q=cashu [32m200 [0m1.588 ms - 4593[0m
+[0mGET /chat/health [36m304 [0m11.922 ms - -[0m
+[0mGET /knowledge/all [36m304 [0m6.640 ms - -[0m
+New user session created: fb3f44c9-ded1-48f1-bc9f-84c6b6f90f49
+[0mPOST /knowledge/add [32m200 [0m20.212 ms - 23[0m
+[0mGET /chat/health [36m304 [0m6.405 ms - -[0m
+[0mGET /knowledge/all [36m304 [0m3.122 ms - -[0m
+New user session created: 62f3c596-53a9-4e1f-95cf-12e3e7e754d5
+[0mPOST /knowledge/crawl [32m200 [0m9080.188 ms - 258[0m
+New user session created: 90cc1866-b5b3-421c-88e3-ad5b172a71ee
+[0mGET /knowledge/search?q=nuts [32m200 [0m2.103 ms - 2062[0m
+New user session created: ef93af88-2235-41aa-a0b6-f3ca7abb56ec
+[0mGET /knowledge/search?q=nuts [32m200 [0m1.760 ms - 2062[0m
+New user session created: 699087bf-7450-4ec7-b9a3-3757cabdaf37
+[0mPOST /knowledge/add [32m200 [0m14.304 ms - 23[0m
+New user session created: 262dee12-63ee-4d1d-aab5-84e35704a588
+[0mGET /knowledge/search?q=nuts [32m200 [0m1.781 ms - 2062[0m
+New user session created: 8b5792fa-d7e0-460f-b317-082e9bbb207b
+[0mGET /knowledge/search?q=bips [32m200 [0m1.357 ms - 272[0m
+[0mGET /chat/health [36m304 [0m8.091 ms - -[0m
+[0mGET /knowledge/all [32m200 [0m7.721 ms - 85636[0m
+[0mGET /chat/health [36m304 [0m5.405 ms - -[0m
+[0mGET /knowledge/all [36m304 [0m2.795 ms - -[0m
+[0mGET /chat/health [36m304 [0m2.907 ms - -[0m
+[0mGET /knowledge/all [36m304 [0m3.491 ms - -[0m
+[0mGET /chat/health [36m304 [0m7.795 ms - -[0m
+[0mGET /knowledge/all [36m304 [0m9.446 ms - -[0m
+[0mGET /chat/health [36m304 [0m6.960 ms - -[0m
+[0mGET /knowledge/all [36m304 [0m7.439 ms - -[0m
+[0mGET /chat/health [36m304 [0m3.606 ms - -[0m
+[0mGET /knowledge/all [36m304 [0m3.031 ms - -[0m
+[0mGET /chat/health [36m304 [0m7.919 ms - -[0m
+[0mGET /knowledge/all [36m304 [0m3.127 ms - -[0m
+[0mGET /chat/health [36m304 [0m5.381 ms - -[0m
+[0mGET /knowledge/all [36m304 [0m2.706 ms - -[0m
+[0mGET /chat/health [36m304 [0m7.393 ms - -[0m
+[0mGET /knowledge/all [36m304 [0m8.148 ms - -[0m
+[0mGET /chat/health [36m304 [0m2.618 ms - -[0m
+[0mGET /knowledge/all [36m304 [0m3.399 ms - -[0m
+[0mGET /chat/health [36m304 [0m7.663 ms - -[0m
+[0mGET /knowledge/all [36m304 [0m8.793 ms - -[0m
+[0mGET /chat/health [36m304 [0m7.258 ms - -[0m
+[0mGET /knowledge/all [36m304 [0m8.153 ms - -[0m
+[0mGET /chat/health [36m304 [0m8.093 ms - -[0m
+[0mGET /knowledge/all [36m304 [0m8.157 ms - -[0m

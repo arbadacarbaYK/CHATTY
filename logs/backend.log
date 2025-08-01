@@ -1,0 +1,60 @@
+
+> backend@0.0.0 start
+> node ./bin/www
+
+New user session created: 9498c3b8-820f-4f13-a52f-a4b7bbe99e83
+Searching knowledge base for: what is blixt wallet?
+New user session created: 5850364d-da54-444a-bc26-19dca59354a4
+[0mGET /knowledge/search?q=what%20is%20blixt%20wallet%3F [32m200 [0m7.958 ms - 14[0m
+Knowledge search results: { results: [] }
+New user session created: 98dda30b-b301-4dae-9290-a86033812e87
+[0mGET /knowledge/search?q=wallet [32m200 [0m3.672 ms - 4803[0m
+Broader knowledge context added: 
+
+- Lightning Wallet is a mobile Bitcoin Lightning wallet for Android devices. It provides a user-friendly interface for sending and receiving Bitcoin instantly with very low fees through the Lightning Network. The wallet is designed for everyday Bitcoin transactions and includes features like QR code scanning, payment channels management, and integration with Lightning Network nodes.
+- Phoenix is a self-custodial Lightning wallet for Android and iOS developed by ACINQ. It allows users to send and receive Bitcoin instantly with very low fees through the Lightning Network. Phoenix is non-custodial, meaning users control their own private keys and funds. It is designed for everyday Bitcoin transactions and provides a user-friendly interface for Lightning Network payments.
+- You need to enable JavaScript to run this app. Bitcoin payments your way ZEUS is a self-custodial, open-source Bitcoin wallet that puts you in control.
+[0mPOST /chat/message [32m200 [0m18005.839 ms - 1045[0m
+New user session created: 645319eb-78b8-4df3-85aa-be5766b3f0c9
+[0mGET /knowledge/recrawl-sources [32m200 [0m2.594 ms - 1032[0m
+New user session created: 892b9738-cbdf-454e-8fe2-04f6e0e4d0ef
+[0mGET /chat/history [36m304 [0m27.978 ms - -[0m
+New user session created: 3d85bbfa-fb7c-428f-91b9-a5415be7b75c
+[0mGET /knowledge/all [36m304 [0m4.490 ms - -[0m
+[0mGET /chat/history [36m304 [0m15.966 ms - -[0m
+[0mGET /knowledge/all [36m304 [0m4.580 ms - -[0m
+Searching knowledge base for: what is blixt wallet
+New user session created: 4d368e0c-eb3a-42ba-9130-8555e0ad34de
+[0mGET /knowledge/search?q=what%20is%20blixt%20wallet [32m200 [0m10.631 ms - 14[0m
+Knowledge search results: { results: [] }
+New user session created: ac281d2b-24c8-44d8-9c18-55f4a61802ae
+[0mGET /knowledge/search?q=wallet [32m200 [0m6.351 ms - 4803[0m
+Broader knowledge context added: 
+
+- Lightning Wallet is a mobile Bitcoin Lightning wallet for Android devices. It provides a user-friendly interface for sending and receiving Bitcoin instantly with very low fees through the Lightning Network. The wallet is designed for everyday Bitcoin transactions and includes features like QR code scanning, payment channels management, and integration with Lightning Network nodes.
+- Phoenix is a self-custodial Lightning wallet for Android and iOS developed by ACINQ. It allows users to send and receive Bitcoin instantly with very low fees through the Lightning Network. Phoenix is non-custodial, meaning users control their own private keys and funds. It is designed for everyday Bitcoin transactions and provides a user-friendly interface for Lightning Network payments.
+- You need to enable JavaScript to run this app. Bitcoin payments your way ZEUS is a self-custodial, open-source Bitcoin wallet that puts you in control.
+[0mPOST /chat/message [32m200 [0m19867.823 ms - 1026[0m
+[0mGET /knowledge/all [36m304 [0m10.379 ms - -[0m
+[0mGET /knowledge/all [36m304 [0m10.559 ms - -[0m
+[0mGET /knowledge/all [36m304 [0m10.985 ms - -[0m
+[0mGET /knowledge/all [36m304 [0m7.212 ms - -[0m
+[0mGET /knowledge/all [36m304 [0m5.724 ms - -[0m
+[0mGET /knowledge/all [36m304 [0m5.315 ms - -[0m
+New user session created: 1a631df6-c120-4f17-9ea5-f1a02b10e7b6
+Searching knowledge base for: what is blixt wallet?
+New user session created: d308eb46-f6b5-4f59-ba23-5325e48bd2d8
+[0mGET /knowledge/search?q=what%20is%20blixt%20wallet%3F [32m200 [0m1.883 ms - 14[0m
+Knowledge search results: { results: [] }
+New user session created: be22797a-dce2-4d37-ab56-3f52ae48db8d
+[0mGET /knowledge/search?q=wallet [32m200 [0m4.439 ms - 4803[0m
+Broader knowledge context added: 
+
+- Lightning Wallet is a mobile Bitcoin Lightning wallet for Android devices. It provides a user-friendly interface for sending and receiving Bitcoin instantly with very low fees through the Lightning Network. The wallet is designed for everyday Bitcoin transactions and includes features like QR code scanning, payment channels management, and integration with Lightning Network nodes.
+- Phoenix is a self-custodial Lightning wallet for Android and iOS developed by ACINQ. It allows users to send and receive Bitcoin instantly with very low fees through the Lightning Network. Phoenix is non-custodial, meaning users control their own private keys and funds. It is designed for everyday Bitcoin transactions and provides a user-friendly interface for Lightning Network payments.
+- You need to enable JavaScript to run this app. Bitcoin payments your way ZEUS is a self-custodial, open-source Bitcoin wallet that puts you in control.
+[0mPOST /chat/message [32m200 [0m14192.726 ms - 1017[0m
+[0mGET /knowledge/all [36m304 [0m4.812 ms - -[0m
+New user session created: 56a09f65-e710-48ef-bde0-8b6bcb10027d
+[0mGET /knowledge/search?q=blixt [32m200 [0m7.164 ms - 887[0m
+[0mGET /knowledge/all [36m304 [0m10.299 ms - -[0m

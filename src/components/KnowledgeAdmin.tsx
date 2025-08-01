@@ -9,9 +9,23 @@ const KnowledgeAdmin: React.FC = () => {
   const [isCrawling, setIsCrawling] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isDevMode, setIsDevMode] = useState(false);
 
   useEffect(() => {
     loadLinks();
+    
+    // Check if we're in development mode
+    const checkDevMode = async () => {
+      try {
+        const response = await fetch('/api/environment');
+        const data = await response.json();
+        setIsDevMode(data.environment === 'development');
+      } catch (error) {
+        // Default to showing admin controls if we can't determine environment
+        setIsDevMode(true);
+      }
+    };
+    checkDevMode();
   }, []);
 
   async function loadLinks() {
@@ -64,16 +78,47 @@ const KnowledgeAdmin: React.FC = () => {
   };
 
   const handleCrawlAll = async () => {
+    console.log('handleCrawlAll called');
     setIsCrawling(true);
     setError(null);
     try {
       const toCrawl = links.filter(l => l.status === 'pending' || l.status === 'error');
+      console.log('Links to crawl:', toCrawl.length, toCrawl.map(l => ({url: l.url, status: l.status})));
       for (const link of toCrawl) {
+        console.log('Crawling:', link.url);
         await crawlLink(link.url);
       }
       await loadLinks();
     } catch (e: any) {
+      console.error('Crawl all error:', e);
       setError('Crawl all failed: ' + (e.message || e));
+    } finally {
+      setIsCrawling(false);
+    }
+  };
+
+  const handleRecrawlAll = async () => {
+    console.log('handleRecrawlAll called');
+    setIsCrawling(true);
+    setError(null);
+    try {
+      const response = await fetch('/knowledge/recrawl-all', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log('Recrawl all result:', result);
+      await loadLinks();
+    } catch (e: any) {
+      console.error('Recrawl all error:', e);
+      setError('Recrawl all failed: ' + (e.message || e));
     } finally {
       setIsCrawling(false);
     }
@@ -92,21 +137,32 @@ const KnowledgeAdmin: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900 p-6 overflow-auto">
       <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 max-w-6xl w-full shadow-lg mx-auto" style={{ maxHeight: '90vh', overflowY: 'auto' }}>
-        {/* Home Button */}
-        <div className="mb-6 flex justify-start">
-          <Link to="/" className="px-4 py-2 rounded-lg bg-gradient-to-r from-orange-500 to-purple-500 text-white font-semibold hover:from-orange-600 hover:to-purple-600 transition-all">← Back to Home</Link>
-        </div>
-        <h2 className="text-3xl font-bold text-white mb-6 text-center">Knowledge Base Admin</h2>
+
+        <h2 className="text-3xl font-bold text-white mb-6 text-center">
+          Knowledge Base {!isDevMode && '(Read Only)'}
+        </h2>
         {error && <div className="mb-4 text-red-400">{error}</div>}
-        <div className="mb-4 flex justify-end">
-          <button
-            className="px-4 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 text-white font-semibold hover:from-blue-600 hover:to-purple-600 transition-all disabled:opacity-50"
-            onClick={handleCrawlAll}
-            disabled={isCrawling || links.filter(l => l.status === 'pending' || l.status === 'error').length === 0}
-          >
-            {isCrawling ? 'Crawling...' : 'Crawl All New & Failed'}
-          </button>
-        </div>
+        
+        {/* Admin controls - only show in dev mode */}
+        {isDevMode && (
+          <div className="mb-4 flex justify-end gap-2">
+            <button
+              className="px-4 py-2 rounded-lg bg-gradient-to-r from-orange-500 to-purple-500 text-white font-semibold hover:from-orange-600 hover:to-purple-600 transition-all disabled:opacity-50"
+              onClick={handleCrawlAll}
+              disabled={isCrawling || links.filter(l => l.status === 'pending' || l.status === 'error').length === 0}
+            >
+              {isCrawling ? 'Crawling...' : 'Crawl New & Failed'}
+            </button>
+            <button
+              className="px-4 py-2 rounded-lg bg-gradient-to-r from-orange-500 to-purple-500 text-white font-semibold hover:from-orange-600 hover:to-purple-600 transition-all disabled:opacity-50"
+              onClick={handleRecrawlAll}
+              disabled={isCrawling || links.length === 0}
+            >
+              {isCrawling ? 'Crawling...' : 'Recrawl All'}
+            </button>
+          </div>
+        )}
+        {/* Add Links section - always show */}
         <div className="mb-6">
           <textarea
             className="w-full min-h-[60px] max-h-40 px-4 py-3 rounded-lg bg-black/30 text-orange-100 placeholder-orange-300/60 border border-orange-500/30 focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-400/20 resize-vertical text-base mb-2"
@@ -138,13 +194,40 @@ const KnowledgeAdmin: React.FC = () => {
               const badTagPatterns = [
                 /window/i, /script/i, /data/i, /contain-/i, /intrinsic-size/i, /webpack/i, /object/i, /style/i, /html/i, /head/i, /body/i, /meta/i, /div/i, /span/i, /class/i, /id/i, /src/i, /href/i, /content/i, /rel/i, /type/i, /async/i, /defer/i, /crossorigin/i, /integrity/i, /referrerpolicy/i, /preconnect/i, /dns-prefetch/i, /manifest/i, /apple/i, /msapplication/i, /theme/i, /color/i, /viewport/i, /description/i, /keywords/i, /author/i, /generator/i, /title/i, /lang/i, /charset/i, /base/i, /link/i, /canonical/i, /alternate/i, /icon/i, /image/i, /svg/i, /png/i, /jpg/i, /jpeg/i, /gif/i, /webp/i, /avif/i, /mp4/i, /webm/i, /ogg/i, /mp3/i, /wav/i, /flac/i, /aac/i, /m4a/i, /opus/i, /track/i, /audio/i, /video/i, /source/i, /media/i, /poster/i, /controls/i, /autoplay/i, /loop/i, /muted/i, /playsinline/i, /preload/i, /width/i, /height/i, /min/i, /max/i, /step/i, /value/i, /name/i, /for/i, /form/i, /action/i, /method/i, /enctype/i, /accept/i, /required/i, /readonly/i, /disabled/i, /checked/i, /selected/i, /multiple/i, /size/i, /pattern/i, /placeholder/i, /autocomplete/i, /autofocus/i, /spellcheck/i, /tabindex/i, /accesskey/i, /draggable/i, /contenteditable/i, /hidden/i, /aria-/i, /role/i, /itemprop/i, /itemscope/i, /itemtype/i, /itemid/i, /itemref/i, /data-/i, /ng-/i, /v-/i, /svelte-/i, /react-/i, /vue-/i, /angular/i, /ember/i, /polymer/i, /lit-/i, /stencil/i, /preact/i, /inferno/i, /riot/i, /marko/i, /mithril/i, /hyperapp/i, /sapper/i, /astro/i, /qwik/i, /solid/i, /alpine/i, /stimulus/i, /htmx/i, /unocss/i, /tailwind/i, /bootstrap/i, /bulma/i, /foundation/i, /material/i, /semantic/i, /uikit/i, /pure/i, /skeleton/i, /milligram/i, /spectre/i, /tachyons/i, /windi/i, /windicss/i, /postcss/i, /sass/i, /scss/i, /less/i, /stylus/i, /css/i, /stylesheet/i, /font/i, /google/i, /adobe/i, /typekit/i, /monospace/i, /serif/i, /sans-serif/i, /cursive/i, /fantasy/i, /system-ui/i, /ui-/i, /apple-/i, /blink-/i, /helvetica/i, /arial/i, /verdana/i, /tahoma/i, /trebuchet/i, /georgia/i, /palatino/i, /garamond/i, /bookman/i, /comic/i, /impact/i, /lucida/i, /times/i, /courier/i, /consolas/i, /menlo/i, /monaco/i, /andale/i, /arial/i, /calibri/i, /cambria/i, /candara/i, /corbel/i, /franklin/i, /gill/i, /lucida/i, /optima/i, /segoe/i, /rockwell/i, /century/i, /baskerville/i, /didot/i, /futura/i, /goudy/i, /hoefler/i, /josefin/i, /lato/i, /montserrat/i, /muli/i, /nunito/i, /open/i, /oswald/i, /playfair/i, /poppins/i, /quicksand/i, /raleway/i, /roboto/i, /rubik/i, /slabo/i, /source/i, /titillium/i, /ubuntu/i, /vollkorn/i, /work/i, /yeseva/i
               ];
-              const filteredTags = (link.tags || []).filter(tag =>
+              // Handle tags that might be a string or array
+              const tagsArray = typeof link.tags === 'string' ? 
+                (link.tags.startsWith('[') ? JSON.parse(link.tags) : link.tags.split(',')) : 
+                (link.tags || []);
+              
+              const filteredTags = tagsArray.filter(tag =>
                 /^[a-zA-Z0-9_-]{3,24}$/.test(tag) &&
                 !badTagPatterns.some(pattern => pattern.test(tag))
               );
               return (
-                <div key={link.url} className="flex flex-col lg:flex-row lg:items-start justify-between bg-black/20 rounded-lg p-4 border border-orange-500/20 mb-3">
-                  <div className="flex-1 flex flex-col lg:mr-4">
+                <div key={link.url} className="bg-black/20 rounded-lg p-4 border border-orange-500/20 mb-3 relative">
+                  {/* Action buttons - top right (only in dev mode) */}
+                  {isDevMode && (
+                    <div className="absolute top-2 right-2 flex gap-1">
+                      <button
+                        className="p-1 text-white/60 hover:text-white/80 transition-all disabled:opacity-50 text-sm bg-transparent border-none"
+                        onClick={() => handleCrawl(link.url)}
+                        disabled={isCrawling}
+                        title={isCrawling ? 'Crawling...' : link.status === 'crawled' ? 'Recrawl' : 'Crawl'}
+                      >
+                        ↻
+                      </button>
+                      <button
+                        className="p-1 text-white/60 hover:text-white/80 transition-all text-sm bg-transparent border-none"
+                        onClick={() => handleRemove(link.url)}
+                        title="Remove"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  )}
+                  
+                  {/* Content */}
+                  <div className={isDevMode ? "pr-16" : ""}> {/* Add right padding only when buttons are shown */}
                     <div className="text-orange-200 font-mono break-all text-sm mb-2">
                       <a 
                         href={link.url} 
@@ -164,23 +247,8 @@ const KnowledgeAdmin: React.FC = () => {
                     {link.content && <div className="text-white/70 text-sm leading-relaxed">{link.content.slice(0, 300)}</div>}
                     {link.errorMsg && <div className="text-red-400 text-sm mt-1">{link.errorMsg}</div>}
                   </div>
-                  <div className="flex flex-row gap-2 mt-3 lg:mt-0 lg:flex-col lg:flex-shrink-0">
-                  <button
-                    className="px-4 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-medium hover:from-blue-600 hover:to-blue-700 transition-all disabled:opacity-50"
-                    onClick={() => handleCrawl(link.url)}
-                    disabled={isCrawling}
-                  >
-                    {isCrawling ? 'Crawling...' : link.status === 'crawled' ? 'Recrawl' : 'Crawl'}
-                  </button>
-                  <button
-                    className="px-4 py-2 rounded-lg bg-gradient-to-r from-red-500 to-red-600 text-white text-sm font-medium hover:from-red-600 hover:to-red-700 transition-all"
-                    onClick={() => handleRemove(link.url)}
-                  >
-                    Remove
-                  </button>
                 </div>
-              </div>
-            ); // <-- close the return for the map
+              ); // <-- close the return for the map
           })}
           </div>
         </div>

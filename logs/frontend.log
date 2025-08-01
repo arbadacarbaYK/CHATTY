@@ -1,0 +1,44 @@
+
+> bitcoin-edu-roleplay@0.0.0 dev
+> vite
+
+
+  VITE v7.0.5  ready in 758 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+2:18:52 PM [vite] http proxy error: /knowledge/all
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1611:16)
+2:19:52 PM [vite] http proxy error: /knowledge/all
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1611:16)
+2:41:04 PM [vite] (client) hmr update /src/components/KnowledgeAdmin.tsx, /src/index.css
+2:41:24 PM [vite] (client) hmr update /src/App.tsx, /src/index.css
+2:41:55 PM [vite] (client) hmr update /src/App.tsx, /src/index.css
+2:42:19 PM [vite] (client) hmr update /src/App.tsx, /src/index.css
+2:42:40 PM [vite] (client) hmr update /src/App.tsx, /src/index.css
+2:46:10 PM [vite] (client) hmr update /src/App.tsx, /src/index.css
+2:46:26 PM [vite] (client) hmr update /src/App.tsx, /src/index.css
+2:46:37 PM [vite] (client) hmr update /src/components/KnowledgeAdmin.tsx, /src/index.css
+2:46:57 PM [vite] (client) hmr update /src/App.tsx, /src/index.css
+2:47:57 PM [vite] (client) hmr update /src/App.tsx, /src/index.css
+2:47:57 PM [vite] (client) hmr update /src/components/KnowledgeAdmin.tsx, /src/index.css
+3:55:24 PM [vite] (client) hmr update /src/components/KnowledgeAdmin.tsx, /src/index.css
+3:55:33 PM [vite] (client) hmr update /src/components/KnowledgeAdmin.tsx, /src/index.css
+3:56:51 PM [vite] (client) hmr update /src/components/KnowledgeAdmin.tsx, /src/index.css
+3:58:19 PM [vite] (client) hmr update /src/components/KnowledgeAdmin.tsx, /src/index.css
+3:58:19 PM [vite] (client) hmr update /src/App.tsx, /src/index.css
+4:04:09 PM [vite] (client) hmr update /src/App.tsx, /src/index.css
+4:04:11 PM [vite] (client) hmr update /src/App.tsx, /src/index.css
+4:04:41 PM [vite] (client) hmr update /src/components/KnowledgeAdmin.tsx, /src/index.css
+4:04:56 PM [vite] (client) hmr update /src/components/KnowledgeAdmin.tsx, /src/index.css
+4:49:45 PM [vite] http proxy error: /knowledge/crawl
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1611:16)
+4:49:50 PM [vite] http proxy error: /knowledge/crawl
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1611:16)
+4:49:52 PM [vite] http proxy error: /knowledge/crawl
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1611:16)

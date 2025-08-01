@@ -2,6 +2,7 @@ import type React from "react"
 
 import { useState, useEffect, useRef } from "react"
 import { ChatService } from "../services/chatService"
+import { WebSearchService } from "../services/webSearchService"
 import { ConnectionMonitor, type ConnectionEvent } from "../services/connectionMonitor"
 import { config } from "../config/appConfig"
 
@@ -9,6 +10,17 @@ interface Message {
   sender: "user" | "avatar"
   text: string
   timestamp: number
+  knowledgeSources?: Array<{
+    url: string
+    title: string
+    content: string
+  }>
+  webSearchResults?: Array<{
+    title: string
+    url: string
+    content: string
+    source: string
+  }>
 }
 
 interface OllamaHealth {
@@ -64,6 +76,7 @@ export const ChatUI: React.FC<ChatUIProps> = ({ skillLevel, onReact, setAvatarSt
   const micModeRef = useRef<boolean>(false)
 
   const chatService = ChatService.getInstance()
+  const webSearchService = WebSearchService.getInstance()
 
   useEffect(() => {
     setOllamaLoading(true);
@@ -105,6 +118,37 @@ export const ChatUI: React.FC<ChatUIProps> = ({ skillLevel, onReact, setAvatarSt
     
     checkMicPermission()
     initializeSpeech()
+
+    // Load conversation history from session
+    const loadConversationHistory = async () => {
+      try {
+        const history = await chatService.getConversationHistory();
+        if (history.length > 0) {
+          setMessages(history);
+        } else {
+          // Set initial welcome message if no history
+          setMessages([
+            {
+              sender: "avatar",
+              text: `Hello! I'm ${avatarName}, your Bitcoin education guide. I'll be teaching you at ${skillLevel} level. Do you have any specific questions I can help you with or would you like an introduction to a special topic?`,
+              timestamp: Date.now(),
+            },
+          ]);
+        }
+      } catch (error) {
+        console.error('Error loading conversation history:', error);
+        // Set initial welcome message on error
+        setMessages([
+          {
+            sender: "avatar",
+            text: `Hello! I'm ${avatarName}, your Bitcoin education guide. I'll be teaching you at ${skillLevel} level. Do you have any specific questions I can help you with or would you like an introduction to a special topic?`,
+            timestamp: Date.now(),
+          },
+        ]);
+      }
+    };
+    
+    loadConversationHistory();
 
     return () => {
       connectionMonitor.removeEventListener(handleConnectionEvent);
@@ -321,15 +365,21 @@ export const ChatUI: React.FC<ChatUIProps> = ({ skillLevel, onReact, setAvatarSt
         return;
       }
       
-      const avatarResponse: Message = {
-        sender: "avatar",
-        text: response.response,
-        timestamp: Date.now(),
+      // Update messages with the full conversation history from the server
+      if (response.conversationHistory) {
+        setMessages(response.conversationHistory);
+      } else {
+        // Fallback to just adding the response
+        const avatarResponse: Message = {
+          sender: "avatar",
+          text: response.response,
+          timestamp: Date.now(),
+          knowledgeSources: response.knowledgeSources
+        }
+        setMessages((prev) => [...prev, avatarResponse])
       }
       
-      console.log('Adding message to state...');
-      setMessages((prev) => [...prev, avatarResponse])
-      console.log('Message added to state');
+      console.log('Messages updated from server');
       
       if (onReact) onReact()
 
@@ -353,20 +403,60 @@ export const ChatUI: React.FC<ChatUIProps> = ({ skillLevel, onReact, setAvatarSt
     }
   }
 
+  const handleWebSearch = async (query: string) => {
+    try {
+      setIsLoading(true);
+      const searchResponse = await webSearchService.searchBitcoinTopics(query);
+      
+      if (searchResponse.success && searchResponse.results.length > 0) {
+        const searchMessage: Message = {
+          sender: "avatar",
+          text: `I found some additional information about "${query}" from the web:\n\n${searchResponse.results.map((result, index) => 
+            `${index + 1}. **${result.title}**\n   ${result.content}\n   Source: ${result.source}\n   URL: ${result.url}\n`
+          ).join('\n')}`,
+          timestamp: Date.now(),
+          webSearchResults: searchResponse.results
+        };
+        setMessages((prev) => [...prev, searchMessage]);
+      } else {
+        const noResultsMessage: Message = {
+          sender: "avatar",
+          text: `I searched for "${query}" but couldn't find any relevant information. You might want to try a different search term or check the knowledge base for existing information.`,
+          timestamp: Date.now(),
+        };
+        setMessages((prev) => [...prev, noResultsMessage]);
+      }
+    } catch (error) {
+      console.error("Web search error:", error);
+      const errorMessage: Message = {
+        sender: "avatar",
+        text: "Sorry, I encountered an error while searching the web. Please try again later.",
+        timestamp: Date.now(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     handleSend(inputText)
   }
 
-  const clearChat = () => {
-    setMessages([
-      {
-        sender: "avatar",
-        text: `Hello! I'm ${avatarName}, your Bitcoin education guide. I'll be teaching you at the ${skillLevel} level. Ask me anything about Bitcoin, Lightning Network, or Nostr!`,
-        timestamp: Date.now(),
-      },
-    ])
-    chatService.clearHistory()
+  const clearChat = async () => {
+    try {
+      await chatService.clearConversationHistory();
+              setMessages([
+          {
+            sender: "avatar",
+            text: `Hello! I'm ${avatarName}, your Bitcoin education guide. I'll be teaching you at ${skillLevel} level. Do you have any specific questions I can help you with or would you like an introduction to a special topic?`,
+            timestamp: Date.now(),
+          },
+        ]);
+    } catch (error) {
+      console.error('Error clearing chat:', error);
+    }
   }
 
   const formatTime = (timestamp: number) => {
@@ -375,6 +465,40 @@ export const ChatUI: React.FC<ChatUIProps> = ({ skillLevel, onReact, setAvatarSt
       minute: "2-digit",
     })
   }
+
+  // Function to make links clickable
+  const makeLinksClickable = (text: string) => {
+    // First, split by double newlines to create paragraphs
+    const paragraphs = text.split(/\n\n+/);
+    
+    return paragraphs.map((paragraph, paragraphIndex) => {
+      const urlRegex = /(https?:\/\/[^\s]+)/g;
+      const parts = paragraph.split(urlRegex);
+      
+      const paragraphContent = parts.map((part, index) => {
+        if (part.match(urlRegex)) {
+          return (
+            <a
+              key={index}
+              href={part}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-400 hover:text-blue-300 underline break-all"
+            >
+              {part}
+            </a>
+          );
+        }
+        return part;
+      });
+      
+      return (
+        <div key={paragraphIndex} className={paragraphIndex > 0 ? "mt-3" : ""}>
+          {paragraphContent}
+        </div>
+      );
+    });
+  };
 
   const getHealthStatusColor = () => {
     if (healthStatus.isRunning && healthStatus.modelAvailable) {
@@ -591,7 +715,7 @@ export const ChatUI: React.FC<ChatUIProps> = ({ skillLevel, onReact, setAvatarSt
       )}
 
       {/* Messages area - scrollable */}
-      <div className="flex-1 min-h-0 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
+      <div className="flex-1 min-h-0 overflow-y-auto space-y-3 pr-2 custom-scrollbar" style={{ maxHeight: 'none' }}>
         {messages.map((message, index) => (
           <div key={index} className={`flex ${message.sender === "user" ? "justify-end" : "justify-start"}`}>
             <div className="max-w-[85%]">
@@ -602,15 +726,64 @@ export const ChatUI: React.FC<ChatUIProps> = ({ skillLevel, onReact, setAvatarSt
                   </div>
                 )}
                 <div
-                  className={`px-4 py-3 rounded-lg shadow-sm ${
+                  className={`px-4 py-3 rounded-lg shadow-sm relative ${
                     message.sender === "user"
                       ? "bg-gradient-to-r from-orange-500 to-yellow-500 text-white"
                       : "bg-black/20 text-orange-100 border border-orange-500/20"
                   }`}
+                  style={{ maxHeight: 'none', overflow: 'visible' }}
                 >
-                  <div className="text-sm leading-relaxed whitespace-pre-wrap">{message.text}</div>
+                  <div className="text-sm leading-relaxed whitespace-pre-wrap text-left">{makeLinksClickable(message.text)}</div>
+                  
+                  {/* Knowledge Sources */}
+                  {message.sender === "avatar" && message.knowledgeSources && message.knowledgeSources.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-orange-500/20 text-left">
+                      <div className="text-xs text-orange-400 mb-2">📚 Sources from knowledge base:</div>
+                      <div className="space-y-2">
+                        {message.knowledgeSources.map((source, index) => (
+                          <div key={`${message.timestamp}-source-${index}`} className="text-xs bg-black/30 rounded p-2 border border-orange-500/20 text-left">
+                            <div className="font-semibold text-orange-300 mb-1">{source.title}</div>
+                            <div className="text-orange-400/80 mb-1">{source.content}</div>
+                            <a 
+                              href={source.url} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-blue-400 hover:text-blue-300 underline text-xs"
+                            >
+                              View source →
+                            </a>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Web Search Results */}
+                  {message.sender === "avatar" && message.webSearchResults && message.webSearchResults.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-blue-500/20 text-left">
+                      <div className="text-xs text-blue-400 mb-2">🌐 Web search results:</div>
+                      <div className="space-y-2">
+                        {message.webSearchResults.map((result, index) => (
+                          <div key={`${message.timestamp}-web-${index}`} className="text-xs bg-black/30 rounded p-2 border border-blue-500/20 text-left">
+                            <div className="font-semibold text-blue-300 mb-1">{result.title}</div>
+                            <div className="text-blue-400/80 mb-1">{result.content}</div>
+                            <div className="text-blue-400/60 mb-1 text-xs">Source: {result.source}</div>
+                            <a 
+                              href={result.url} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-blue-400 hover:text-blue-300 underline text-xs"
+                            >
+                              Visit website →
+                            </a>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
                   <div
-                    className={`text-xs mt-2 opacity-70 ${
+                    className={`text-xs mt-2 opacity-70 text-right ${
                       message.sender === "user" ? "text-orange-100" : "text-orange-300"
                 }`}
               >
@@ -618,7 +791,7 @@ export const ChatUI: React.FC<ChatUIProps> = ({ skillLevel, onReact, setAvatarSt
                   </div>
                 </div>
                 {message.sender === "user" && (
-                  <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                  <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
                     U
               </div>
                 )}
@@ -664,22 +837,21 @@ export const ChatUI: React.FC<ChatUIProps> = ({ skillLevel, onReact, setAvatarSt
                 handleSend(inputText);
               }
             }}
-            placeholder="Ask about Bitcoin, Lightning, or Nostr..."
+                          placeholder="Ask about Bitcoin, Lightning, Cashu, or Nostr..."
             className="w-full min-h-[64px] max-h-40 px-4 py-3 rounded-lg bg-black/30 text-orange-100 placeholder-orange-300/60 border border-orange-500/30 focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-400/20 resize-vertical text-base"
             disabled={isLoading || !ollamaReady}
             maxLength={config.ui.maxMessageLength}
             rows={3}
           />
-          <div className="flex flex-row gap-2 w-full justify-end">
-            {/* Only the send button remains */}
-          <button
-            type="submit"
-            disabled={!inputText.trim() || isLoading || !ollamaReady}
-              className="px-4 py-2 rounded-lg transition-colors bg-gradient-to-r from-orange-500 to-yellow-500 text-white hover:from-orange-600 hover:to-yellow-600 disabled:bg-gray-500 disabled:cursor-not-allowed font-semibold flex items-center justify-center text-sm"
-          >
-              {isLoading ? "⏳" : "🚀"}
-          </button>
-          </div>
+                      <div className="flex flex-row gap-2 w-full justify-end">
+              <button
+                type="submit"
+                disabled={!inputText.trim() || isLoading || !ollamaReady}
+                className="px-4 py-2 rounded-lg transition-colors bg-gradient-to-r from-orange-500 to-yellow-500 text-white hover:from-orange-600 hover:to-yellow-600 disabled:bg-gray-500 disabled:cursor-not-allowed font-semibold flex items-center justify-center text-sm"
+              >
+                {isLoading ? "⏳" : "🚀"}
+              </button>
+            </div>
         </form>
 
         {/* Status indicators */}

@@ -1,19 +1,21 @@
 # Bitcoin Education Roleplay
 
-An interactive web-based education platform featuring a 3D avatar (GLB model) that teaches users about Bitcoin, Lightning Network, and Nostr through engaging conversations.
+<img width="1907" height="914" alt="Screenshot from 2025-07-28 23-59-31" src="https://github.com/user-attachments/assets/1f15500a-6820-469c-b96c-4f09f5aeb62d" />
 
-## Features
-
-- **3D Avatar Rendering**: Uses `<model-viewer>` to display GLB avatars (e.g., Ready Player Me)
-- **AI-Powered Chat**: Intelligent responses tailored to user skill levels using local Ollama models
-- **Skill Level Adaptation**: Content adjusts based on beginner, intermediate, or advanced knowledge
+An interactive web-based education platform featuring a 3D avatar (GLB model)  `<model-viewer>` to display GLB avatars (e.g. Ready Player Me)
+- **AI-Powered Chat**: Bitcoin maximalist responses using local Ollama models
+- **Specialized Avatars**: Different avatars for Bitcoin, Lightning, Nostr, and Cashu topics
 - **Modern UI**: Beautiful, responsive design with glassmorphism effects
 - **Voice Input & Output**: Use your microphone to ask questions and have responses read aloud (browser-based)
-- **Educational Focus**: Comprehensive coverage of Bitcoin ecosystem topics (no real wallet/Nostr integration)
+- **Educational Focus**: Comprehensive coverage of Bitcoin ecosystem topics
 - **Completely Free**: Uses local Ollama AI models - no API costs, no external keys
 - **Production Ready**: Health checks, error handling, configuration system
 - **Mobile Responsive**: Works perfectly on desktop and mobile devices
 - **Privacy First**: All conversations stay on your local machine
+- **Multi-User Support**: Session management for multiple concurrent users
+- **Knowledge Base**: Enhanced web crawling with unified API, intelligent tag detection, and protected wallet information
+
+<img width="1222" height="773" alt="Screenshot from 2025-07-28 23-58-17" src="https://github.com/user-attachments/assets/eeea18c3-1940-4b29-a2ef-6ceb874bae03" />
 
 ## Tech Stack
 
@@ -21,7 +23,39 @@ An interactive web-based education platform featuring a 3D avatar (GLB model) th
 - **Styling**: Tailwind CSS
 - **Avatar Technology**: `<model-viewer>` with GLB models (Ready Player Me or similar)
 - **AI Integration**: Ollama with local models (completely free!)
+- **Backend**: Node.js + Express with session management
+- **Database**: SQLite for knowledge base storage
 - **Build Tools**: npm/npx, Vite, PostCSS, Autoprefixer
+
+## 🆕 **Latest Features**
+
+### **Enhanced AI Responses**
+- **Skill Level Adaptation**: Beginner (2-3 sentences), Intermediate (4-6 sentences), Advanced (6-8 sentences)
+- **Specialist Avatar Referral**: AI suggests switching to specialist avatars for deeper technical insights
+- **Improved Decision-Making**: AI asks clarifying questions instead of avoiding decisions
+- **Better Context Management**: Smart conversation history selection
+
+### **Intelligent Knowledge Base**
+- **Ecosystem-Aware Tagging**: Automatically detects Bitcoin, Lightning, Nostr, and Cashu ecosystems
+- **Semantic Search**: Enhanced search with intelligent scoring and ecosystem relevance
+- **Protected Wallet Database**: 44 comprehensive LNURL wallets with detailed feature information
+- **Hardware Building Guide**: LNbits hardware projects including hardware wallets, ATMs, POS terminals
+- **21 Individual Hardware Projects**: Separate protected entries for each LNbits hardware project including Nostr Signing Device, Arcade Machine, Zap Lamp, Gerty, ATM, Coins Only, Big (FOSSA) ATM, The Bat-ATM 🦇, LNPoS Terminal, POS with NFC, Lightning Piggy, Hardware Wallet, Bitcoin Switch, Vending Machine, More Fun Projects, A watch - but cooler, Bolty, Nerdminer, Bitcoin Ticker, BTClock, and LoRa
+- **Ereignishorizont Projects**: Additional hardware solutions including LNPoS terminals, Bitcoin switches, and ATM hardware
+- **Smart Chat Responses**: AI uses general knowledge + knowledge base, shows context sources below chat bubbles, and provides optimistic references to available resources
+- **Knowledge Source Display**: Chat bubbles now show relevant knowledge base sources below AI responses with clickable links
+- **Improved Chat UI**: Left-aligned text in all chat bubbles, complete message display without cutoff
+- **Bidirectional Normalization**: Handles NWC/Nostr Wallet Connect and eCash/Cashu variations
+- **Wallet Comparison Resources**: Integrated comprehensive wallet comparison guides for informed decision-making
+- **Environment-Based Security**: Production mode restricts admin functions while allowing user contributions
+
+### **Enhanced UI/UX**
+- **Improved Chat Interface**: Right-aligned timestamps, better user icon colors
+- **Performance Monitoring**: Track response times and knowledge base hit rates
+- **Better Error Handling**: Comprehensive error classification and retry logic
+- **Environment-Based Controls**: Automatic UI adaptation based on deployment mode
+
+<img width="1199" height="885" alt="Screenshot from 2025-07-28 23-59-45" src="https://github.com/user-attachments/assets/40d566ab-a242-4003-98a7-646b4e85b2a2" />
 
 ## Quick Start
 
@@ -32,24 +66,44 @@ An interactive web-based education platform featuring a 3D avatar (GLB model) th
 ### Installation
 ```bash
 # Clone and install
-git clone <repository-url>
+git clone gitHub.com/arbadacarbayk/CHATTY
 cd bitcoin-edu-roleplay
 npm install
 
 # Install and setup Ollama
 # 1. Install Ollama from https://ollama.ai
-# 2. Pull the model: ollama pull llama3.2:3b
+# 2. Pull the model: ollama pull llama3.2:1b (fastest) or llama3.2:3b (better quality)
 # 3. Start Ollama service: ollama serve
 
-# Start development server
-npm run dev
+# Start all services using the unified script
+./start.sh
 ```
 
 ### Ollama Setup
 1. **Install Ollama**: Download from https://ollama.ai
-2. **Pull the Model**: `ollama pull llama3.2:3b` (faster on 4-core systems)
+2. **Pull the Model**: 
+   - `ollama pull llama3.2:1b` (default, 1.2B parameters, English language)
+   - `ollama pull llama3.2:3b` (better quality, recommended)
+   - `ollama pull tinyllama:1.1b` (lightweight, very fast)
 3. **Start Service**: `ollama serve`
 4. **Verify**: Visit http://localhost:11434 to check if Ollama is running
+
+### AI Model Information
+- **Default Model**: `llama3.2:1b` (1.2B parameters)
+- **Language**: English
+- **Context**: Bitcoin-focused education and technical discussions
+- **Capabilities**: Knowledge base queries, web search suggestions, resource linking
+
+### Starting the Application
+```bash
+# Start all services (Ollama + Backend + Frontend)
+./start.sh
+
+# Or manually:
+ollama serve &
+cd backend && npm start &
+npm run dev
+```
 
 ## Unified Startup (Ollama + Backend + Frontend)
 
@@ -59,8 +113,8 @@ npm run dev
 
 ### First-Time Setup
 ```bash
-# 1. Install Ollama and pull the faster model
-ollama pull llama3.2:3b
+# 1. Install Ollama and pull the model
+ollama pull llama3.2:1b  # or llama3.2:3b for better quality
 
 # 2. Install frontend dependencies
 cd bitcoin-edu-roleplay
@@ -73,6 +127,10 @@ npm install
 
 ### Starting Everything (Each Time)
 ```bash
+# Use the unified start script (recommended)
+./start.sh
+
+# Or manually:
 # 1. Start Ollama (in a terminal)
 ollama serve
 
@@ -83,8 +141,7 @@ npm start
 npm run dev
 ```
 
-### Optional: Unified Start Script
-Use the provided `start.sh` script for easy management:
+### Start Script Management
 ```bash
 # Start all services
 ./start.sh start
@@ -99,240 +156,200 @@ Use the provided `start.sh` script for easy management:
 ./start.sh logs
 ```
 
-### What Runs Where
-| Service   | Install Command         | Start Command         | Notes                        |
-|-----------|------------------------|-----------------------|------------------------------|
-| Ollama    | ollama pull phi3:mini  | ollama serve          | Optimized for 4-core systems |
-| Backend   | npm install (in /backend) | npm start (in /backend) | Handles knowledge/context    |
-| Frontend  | npm install            | npm run dev           | User/admin interface         |
+## 📚 **Knowledge Base API**
 
----
+The platform includes a comprehensive **Knowledge Base API** with enhanced web crawling capabilities:
 
-## Configuration
+### **Features**
+- **Unified Crawling Engine**: All endpoints use the same enhanced crawling logic
+- **Smart Content Extraction**: Specialized handling for GitHub, Twitter/X, Bitcoin sites
+- **Enhanced Error Classification**: Detailed error types and retry logic
+- **Improved Tag Extraction**: Better keyword detection and filtering
+- **Comprehensive Testing**: Full test suite with performance metrics
+- **Multi-User Support**: Session management for concurrent users
 
-The app supports environment-based configuration for both local development and server deployment. Copy `env.example` to `.env` and customize:
-
-### Local Development (Default)
+### **Quick API Examples**
 ```bash
-# No environment file needed - uses Vite proxies
-# Ollama: /api → http://localhost:11434
-# Backend: /knowledge → http://localhost:3000
+# Add a new URL to crawl
+curl -X POST http://localhost:3000/knowledge/add \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://greatbitcoin.news"}'
+
+# Crawl a single URL regardless of status
+curl -X POST http://localhost:3000/knowledge/crawl-single \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://greatbitcoin.news"}'
+
+# Crawl all pending/failed entries
+curl -X POST http://localhost:3000/knowledge/crawl-all
+
+# Comprehensive recrawl with improvements
+curl -X POST http://localhost:3000/knowledge/recrawl-all
+
+# Search knowledge base
+curl -X GET "http://localhost:3000/knowledge/search?q=lightning"
+
+# Get all knowledge entries
+curl -X GET http://localhost:3000/knowledge/all
+
+# Send chat message
+curl -X POST http://localhost:3000/chat/message \
+  -H "Content-Type: application/json" \
+  -d '{"message": "What is Bitcoin?", "skillLevel": "beginner", "avatarName": "Satoshi"}'
 ```
 
-### Server Deployment
-```bash
-# Same server deployment
-VITE_OLLAMA_URL=http://localhost:11434
-VITE_BACKEND_URL=http://localhost:3000
+### **📖 Full API Documentation**
+See [KNOWLEDGE_API.md](./docs/KNOWLEDGE_API.md) for complete API documentation, including:
+- All endpoints with examples
+- Error handling and classification
+- Performance characteristics
+- Testing procedures
+- Best practices
 
-# Remote Ollama server
-VITE_OLLAMA_URL=http://your-ollama-server.com:11434
-VITE_BACKEND_URL=http://localhost:3000
+### **🔗 Available API Endpoints**
 
-# Docker deployment
-VITE_OLLAMA_URL=http://ollama:11434
-VITE_BACKEND_URL=http://backend:3000
+#### **Knowledge Base API** (`/knowledge`)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/knowledge/all` | Get all knowledge entries |
+| `GET` | `/knowledge/search?q=query` | Search knowledge base |
+| `POST` | `/knowledge/add` | Add new URL to crawl |
+| `POST` | `/knowledge/crawl` | Crawl specific URL |
+| `POST` | `/knowledge/crawl-all` | Crawl all pending/failed entries |
+| `POST` | `/knowledge/crawl-single` | Crawl single URL regardless of status |
+| `POST` | `/knowledge/recrawl-all` | Recrawl all entries with improvements |
+| `DELETE` | `/knowledge/remove` | Remove knowledge entry |
+| `DELETE` | `/knowledge/clear` | Clear all knowledge entries |
 
-# Cloud deployment
-VITE_OLLAMA_URL=https://your-ollama-api.com
-VITE_BACKEND_URL=https://your-backend-api.com
-```
+#### **Chat API** (`/chat`)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/chat/message` | Send message and get AI response |
+| `GET` | `/chat/history` | Get conversation history |
+| `GET` | `/chat/session-info` | Get session information |
 
-### Advanced Configuration
-```bash
-# Ollama Configuration (Optimized for 4-core systems)
-VITE_OLLAMA_MODEL=llama3.2:3b
-VITE_OLLAMA_TIMEOUT=120000
+## 🔧 **Configuration**
 
-# Chat Configuration
-VITE_CHAT_MAX_HISTORY=20
-VITE_HEALTH_CHECK_INTERVAL=30000
-
-# UI Configuration
-VITE_MOBILE_BREAKPOINT=768
-VITE_MAX_MESSAGE_LENGTH=1000
-```
-
-## Helper Scripts
-
-The project includes several helper scripts for development and testing:
-
-### Knowledge Base Management
-- `add_knowledge_links.sh` - Add Bitcoin-related URLs to the knowledge base
-- `crawl_all.sh` - Crawl all pending URLs in the knowledge base
-- `recrawl_all.sh` - Recrawl all URLs to refresh content and tags
-
-### Service Management
-- `start.sh` - Unified startup script for all services (Ollama, Backend, Frontend)
-  ```bash
-  ./start.sh start    # Start all services
-  ./start.sh status   # Check service status
-  ./start.sh stop     # Stop all services
-  ./start.sh logs     # View recent logs
-  ```
-
-### Optimal System Requirements
-
-| Component | Minimum | Recommended | Notes |
-|-----------|---------|-------------|-------|
-| CPU | 2 cores | 4+ cores | llama3.2:3b optimized for 4-core systems |
-| RAM | 4GB | 8GB+ | 39GB available for optimal performance |
-| Storage | 2GB | 5GB+ | For models and knowledge base |
-| OS | Linux/macOS/Windows | Linux | Best performance on Linux |
-
-### Performance Optimization
-
-The system is configured for optimal performance on 4-core systems:
-
-- **Model**: `llama3.2:3b` (3B parameters, fast inference ~2.6s)
-- **Threads**: 2 (optimal for 4-core systems)
-- **Context**: 1024 tokens (balanced performance/memory)
-- **Response Length**: 50 tokens (fast, concise responses)
-- **Timeout**: 30 seconds (prevents hanging)
-
-## Usage
-
-1. **Select Skill Level**: Choose beginner, intermediate, or advanced
-2. **Start Learning**: Click "Start Learning" to begin
-3. **Chat with the Avatar**: Ask questions about Bitcoin, Lightning Network, or Nostr
-4. **Use Voice Features**: Speak your questions or have answers read aloud
-5. **Monitor AI Status**: Check the health indicator to ensure AI is ready
-
-## Production Deployment
-
-### Build for Production
-```bash
-npm run build
-```
-
-The `dist/` folder contains the production build ready for deployment.
-
-### Production Requirements
-- Web server (nginx, Apache, etc.)
-- Ollama running on the server or accessible network
-- Required model downloaded: `ollama pull llama3.2:3b` (4-core systems) or `ollama pull phi3:mini` (8+ core servers)
-- Minimum 4GB RAM, 8GB+ recommended
-- 4+ CPU cores for optimal performance
-
-## Project Structure
-
-```
-src/
-├── components/          # React components
-│   ├── AvatarDisplay.tsx        # 3D avatar rendering with <model-viewer>
-│   ├── ChatUI.tsx               # Chat interface with health monitoring
-│   ├── AvatarSelector.tsx       # Avatar/skill selection
-│   └── KnowledgeAdmin.tsx       # Knowledge base management interface
-├── services/           # API services
-│   ├── chatService.ts  # Ollama integration with health checks
-│   └── knowledgeService.ts      # Knowledge base API client
-├── config/             # Configuration management
-│   └── appConfig.ts    # Environment-based configuration
-├── App.tsx             # Main application with responsive design
-└── main.tsx            # Application entry point
-
-backend/
-├── routes/
-│   └── knowledge.js    # Knowledge base API endpoints
-├── prisma/
-│   └── dev.db          # SQLite database (knowledge storage)
-├── bin/
-│   └── www             # Express server startup
-└── app.js              # Express application setup
-
-public/
-├── avatars/            # Avatar assets (GLB URLs)
-└── ...
-```
-
-## Database
-
-The application uses SQLite for knowledge storage:
-
-- **Database Path**: `backend/prisma/dev.db`
-- **Schema**: Knowledge base entries with URLs, content, tags, and status
-- **Backup**: `backend/prisma/dev.db.backup` (automatic backup)
-
-## API Endpoints
-
-### Knowledge Base API (`/knowledge`)
-
-| Method | Endpoint | Description | Request Body | Response |
-|--------|----------|-------------|--------------|----------|
-| `GET` | `/knowledge/all` | Get all knowledge entries | - | `{knowledge: [...]}` |
-| `POST` | `/knowledge/add` | Add new URL to crawl | `{url: string}` | `{success: true, id: number}` |
-| `POST` | `/knowledge/crawl` | Crawl and process URL | `{url: string}` | `{success: true, tags: [...], preview: string}` |
-| `DELETE` | `/knowledge/remove` | Remove knowledge entry | `{url: string}` | `{success: true, deleted: boolean}` |
-
-### Ollama API (External)
-
-| Method | Endpoint | Description | Request Body | Response |
-|--------|----------|-------------|--------------|----------|
-| `POST` | `http://localhost:11434/api/generate` | Generate AI response | `{model: string, prompt: string, stream: false}` | `{response: string}` |
-
-### Frontend Routes
-
-| Route | Component | Description |
-|-------|-----------|-------------|
-| `/` | Start page | Avatar selection and skill level choice |
-| `/chat` | Main chat interface | AI conversation with avatar |
-| `/input` | Knowledge Admin | Manage knowledge base entries |
-
-## Knowledge Base Features
-
-- **Web Crawling**: Automatically extracts content and tags from URLs
-- **Smart Tagging**: Filters out UI/navigation words, focuses on meaningful content
-- **Content Cleaning**: Removes HTML artifacts, duplicates, and whitespace
-- **Recrawl Support**: Refresh content and tags for existing entries
-- **Admin Interface**: Add, remove, and manage knowledge entries
-- **Chat Integration**: Relevant knowledge is automatically injected into AI prompts
-
-## Troubleshooting
-
-### Ollama Not Working
-- Make sure Ollama is installed: https://ollama.ai
-- Check if service is running: `ollama serve`
-- Verify model is downloaded: `ollama list`
-- Pull the faster model: `ollama pull llama3.2:3b`
-- Check the health indicator in the chat interface
-- For 4-core systems, use `llama3.2:3b` for best performance
-
-### Avatar Not Displaying
-- Check browser console for WebGL errors
-- Ensure GLB model URLs are correct and accessible
-
-### Chat Not Working
-- Ensure Ollama is running on http://localhost:11434
-- Check if the model is downloaded and available
-- Verify network connectivity to local Ollama service
-- Look at the health status indicator for detailed error information
-
-### Performance Issues
-- Use the faster model: `ollama pull llama3.2:3b` (optimized for 4-core systems)
-- Adjust timeout settings in configuration (30 seconds recommended)
-- Check system resources (CPU, RAM)
-- For servers with more cores, consider `phi3:mini` for longer responses
-
-## Development
+### **Environment Variables**
+The application uses environment variables for configuration. Copy `.env.example` to `.env` and customize:
 
 ```bash
-# Install dependencies
-npm install
+# Copy environment template
+cp .env.example .env
 
-# Start development server
+# Edit configuration
+nano .env
+```
+
+### **Key Configuration Options**
+- **Ollama Model**: `VITE_OLLAMA_MODEL=llama3.2:1b` (fastest) or `llama3.2:3b` (better quality)
+- **Session Management**: Auto-generated session secrets for multi-user support
+- **Knowledge Base**: SQLite database with enhanced crawling capabilities
+
+### **Session Management**
+- **Development**: Regular cookies, 1-hour sessions
+- **Production**: Secure cookies, 24-hour sessions
+- **Auto-Generated Secrets**: Secure session management for multiple users
+
+## 🚀 **Deployment**
+
+### **Local Development**
+```bash
+# Start all services (recommended)
+./start.sh
+
+# Or manually:
+ollama serve &
+cd backend && npm start &
 npm run dev
-
-# Build for production
-npm run build
-
-# Preview production build
-npm run preview
-
-# Run linting
-npm run lint
 ```
 
-## Contributing
+### **Production Deployment**
+```bash
+# Set production environment
+export NODE_ENV=production
+
+# Start with production settings
+./start.sh
+```
+
+## 📊 **Features**
+
+### **AI Chat**
+- **Local Models**: Uses Ollama for completely free AI chat
+- **Bitcoin Maximalist Focus**: Specialized prompts for Bitcoin, Lightning, Nostr, and Cashu topics
+- **Avatar Specialists**: Different avatars for different topics (Satoshi, Lightning, Nostr, Cashu)
+- **Knowledge Integration**: Searches knowledge base for relevant information
+- **Session Persistence**: Maintains conversation history per user
+
+### **Knowledge Base**
+- **Web Crawling**: Enhanced crawling of Bitcoin-related sites
+- **Content Processing**: Smart content extraction and summarization
+- **Tag Generation**: Automatic keyword extraction and categorization
+- **Error Handling**: Comprehensive error classification and recovery
+- **Regular Updates**: Automated crawling with cron scheduling
+- **Protected Wallet Database**: 44 comprehensive LNURL wallets with detailed feature information
+- **Environment-Based Security**: Production mode restricts admin functions while allowing user contributions
+
+### **Avatar System**
+- **3D Rendering**: Uses `<model-viewer>` for GLB model display
+- **Multiple Avatars**: Support for different educational personas
+- **Responsive Design**: Works on desktop and mobile devices
+
+### **Multi-User Support**
+- **Session Management**: Secure user sessions with auto-generated secrets
+- **Concurrent Users**: Support for multiple simultaneous users
+- **Privacy First**: All data stays local, no external tracking
+
+### **Environment-Based Security**
+- **Production Mode**: Users can add links but cannot crawl, recrawl, or delete entries
+- **Development Mode**: Full administrative control including individual and bulk operations
+- **Shared Database**: Both modes use the same database and logic
+- **Protected Entries**: Wallet information is protected from deletion in both modes
+- **Automatic UI Adaptation**: Interface adjusts based on deployment environment
+
+## 🧪 **Testing**
+
+### **Knowledge Base Testing**
+```bash
+# Run comprehensive test suite
+node test_bulk_crawl.cjs
+
+# Run focused crawl testing
+node test_crawl_all.cjs
+```
+
+### **API Testing**
+```bash
+# Test knowledge base endpoints
+curl -X GET http://localhost:3000/knowledge/all
+
+# Test search functionality
+curl -X GET "http://localhost:3000/knowledge/search?q=bitcoin"
+
+# Test single crawl
+curl -X POST http://localhost:3000/knowledge/crawl-single \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://greatbitcoin.news"}'
+
+# Test chat functionality
+curl -X POST http://localhost:3000/chat/message \
+  -H "Content-Type: application/json" \
+  -d '{"message": "What is Bitcoin?", "skillLevel": "beginner", "avatarName": "Satoshi"}'
+
+# Test session info
+curl -X GET http://localhost:3000/chat/session-info
+```
+
+## 📖 **Documentation**
+
+- **[KNOWLEDGE_API.md](./docs/KNOWLEDGE_API.md)**: Complete API documentation
+- **[SETUP_INSTRUCTIONS.md](./docs/SETUP_INSTRUCTIONS.md)**: Detailed setup guide
+- **[PRODUCTION_READY.md](./docs/PRODUCTION_READY.md)**: Production deployment guide
+- **[REGULAR_CRAWLING.md](./docs/REGULAR_CRAWLING.md)**: Automated crawling setup guide
+- **[RESOURCE_MANAGEMENT.md](./docs/RESOURCE_MANAGEMENT.md)**: Resource management and optimization
+
+## 🤝 **Contributing**
 
 1. Fork the repository
 2. Create a feature branch
@@ -340,29 +357,6 @@ npm run lint
 4. Test thoroughly
 5. Submit a pull request
 
-## License
+## 📄 **License**
 
-MIT License - see LICENSE file for details
-
-## Support
-
-For issues and questions:
-- Check the troubleshooting section
-- Review browser console for error messages
-- Ensure all prerequisites are met
-- Check Ollama documentation at https://ollama.ai
-- Verify configuration settings in your `.env` file
-
-> **Project Structure Note:**
-> All project files (frontend, backend, Ollama, database) are now inside the `bitcoin-edu-roleplay` folder. The backend is at `bitcoin-edu-roleplay/backend` and must be started from there. This makes local and server deployment easy and portable.
-
-## Text-to-Speech (TTS) Platform Support
-
-| Platform         | Browser         | System TTS Install Needed? | Browser Uses System Voices? | Result in App         |
-|------------------|----------------|---------------------------|----------------------------|-----------------------|
-| Windows/macOS    | Any            | No                        | Yes                        | Natural voice         |
-| iOS/Android      | Any            | No                        | Yes                        | Natural voice         |
-| Linux            | Chrome/Brave   | No (doesn't help)         | No                         | None/robotic/none     |
-| Linux            | Firefox        | No (doesn't help)         | No                         | None/robotic/none     |
-
-The app always uses the best available voice for the user's platform. On Linux, browser-native TTS is limited by browser support, not by system packages.
+This project is open source and available under the MIT License.

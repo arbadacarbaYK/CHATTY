@@ -5,7 +5,8 @@ import { ChatService } from './services/chatService';
 import { config } from './config/appConfig';
 import './App.css';
 import KnowledgeAdmin from './components/KnowledgeAdmin';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { RecrawlManager } from './components/RecrawlManager';
+import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 
 type SkillLevel = 'beginner' | 'intermediate' | 'advanced';
 
@@ -37,6 +38,7 @@ function AppContent() {
   const [isStarted, setIsStarted] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showRecrawlManager, setShowRecrawlManager] = useState(false);
   const [reactTrigger, setReactTrigger] = useState(0);
   const [avatarState, setAvatarState] = useState<'idle' | 'thinking' | 'speaking'>('idle');
   const [modelWarmedUp, setModelWarmedUp] = useState(false);
@@ -64,20 +66,10 @@ function AppContent() {
         
         setWarmupStatus('Loading AI model into memory...');
         
-        // Send a simple test message to load the model into memory
-        const response = await fetch(`${config.ollama.url}/generate`, {
-          method: 'POST',
+        // Send a simple health check to verify backend is available
+        const response = await fetch('/chat/health', {
+          method: 'GET',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            model: config.ollama.model,
-            prompt: 'Hello',
-            stream: false,
-            options: {
-              num_predict: 5,
-              max_tokens: 10,
-              temperature: 0.1,
-            },
-          }),
         });
         
         if (response.ok) {
@@ -213,6 +205,7 @@ function AppContent() {
             >
               {modelWarmedUp ? 'Start Learning' : 'Loading AI Model...'}
             </button>
+
               <div className="text-white/60 text-sm text-center">
                 <p>💡 This app uses local AI (Ollama)</p>
                 <p>🔒 Your conversations never leave your device</p>
@@ -247,12 +240,14 @@ function AppContent() {
               ← Back
             </button>
             <h1 className="text-lg font-semibold text-white">Bitcoin Education</h1>
-            <button
-              onClick={() => setShowSettings(!showSettings)}
-              className="text-white hover:text-orange-400 transition-colors"
-            >
-              ⚙️
-            </button>
+                    <div className="flex space-x-2">
+          <button
+            onClick={() => setShowSettings(!showSettings)}
+            className="text-white hover:text-orange-400 transition-colors"
+          >
+            ⚙️
+          </button>
+        </div>
           </div>
           {showSettings && (
             <div className="mt-4 p-3 bg-white/10 rounded-lg">
@@ -286,6 +281,11 @@ function AppContent() {
         <div className="bg-white/10 backdrop-blur-lg p-4 flex-shrink-0">
           <ChatUI skillLevel={skillLevel} onReact={() => setReactTrigger((prev) => prev + 1)} setAvatarState={setAvatarState} avatarName={avatars[selectedAvatarIdx].name} />
         </div>
+        
+        {/* Recrawl Manager */}
+        {showRecrawlManager && (
+          <RecrawlManager onClose={() => setShowRecrawlManager(false)} />
+        )}
       </div>
     );
   }
@@ -293,16 +293,7 @@ function AppContent() {
   // Desktop layout
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900 flex">
-      {/* Header */}
-      <div className="absolute top-4 right-4 z-10">
-        <button
-          onClick={handleBackToMenu}
-          className="bg-white/10 backdrop-blur-lg text-white p-2 rounded-lg hover:bg-white/20 transition-colors"
-          title="Back to Menu"
-        >
-          🏠
-        </button>
-      </div>
+
 
       {/* Avatar Section */}
       <div className="w-1/3 h-screen flex flex-col p-8">
@@ -327,7 +318,57 @@ function AppContent() {
         <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 w-full h-full flex flex-col">
           <ChatUI skillLevel={skillLevel} onReact={() => setReactTrigger((prev) => prev + 1)} setAvatarState={setAvatarState} avatarName={avatars[selectedAvatarIdx].name} />
         </div>
+        
+        {/* Recrawl Manager */}
+        {showRecrawlManager && (
+          <RecrawlManager onClose={() => setShowRecrawlManager(false)} />
+        )}
       </div>
+    </div>
+  );
+}
+
+function Navigation() {
+  const location = useLocation();
+  
+  return (
+    <div className="fixed top-4 left-4 z-50 flex gap-2">
+      {location.pathname === '/' && (
+        <>
+          <Link 
+            to="/" 
+            className="bg-white/10 backdrop-blur-lg text-white p-2 rounded-lg hover:bg-white/20 transition-colors"
+            title="Home"
+          >
+            🏠
+          </Link>
+          <Link 
+            to="/input" 
+            className="bg-white/10 backdrop-blur-lg text-white p-2 rounded-lg hover:bg-white/20 transition-colors"
+            title="Knowledge Base Admin"
+          >
+            📚
+          </Link>
+        </>
+      )}
+      {location.pathname === '/input' && (
+        <Link 
+          to="/" 
+          className="bg-white/10 backdrop-blur-lg text-white p-2 rounded-lg hover:bg-white/20 transition-colors"
+          title="Home"
+        >
+          🏠
+        </Link>
+      )}
+      {location.pathname !== '/' && location.pathname !== '/input' && (
+        <Link 
+          to="/" 
+          className="bg-white/10 backdrop-blur-lg text-white p-2 rounded-lg hover:bg-white/20 transition-colors"
+          title="Home"
+        >
+          🏠
+        </Link>
+      )}
     </div>
   );
 }
@@ -336,16 +377,7 @@ function App() {
   return (
     <Router>
       <div>
-        {/* TODO: Only show to admin */}
-        <div className="fixed top-4 left-4 z-50">
-          <Link 
-            to="/input" 
-            className="bg-white/10 backdrop-blur-lg text-white p-2 rounded-lg hover:bg-white/20 transition-colors"
-            title="Knowledge Admin"
-          >
-            📚
-          </Link>
-        </div>
+        <Navigation />
         <Routes>
           <Route path="/input" element={<KnowledgeAdmin />} />
           <Route path="/*" element={<AppContent />} />
