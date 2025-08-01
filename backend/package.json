@@ -13,7 +13,7 @@
     "express-session": "^1.18.0",
     "https": "^1.0.0",
     "keyword-extractor": "^0.0.28",
-    "morgan": "~1.9.1",
+    "morgan": "~1.10.1",
     "node-fetch": "^2.7.0",
     "sqlite3": "^5.1.7",
     "uuid": "^10.0.0"
