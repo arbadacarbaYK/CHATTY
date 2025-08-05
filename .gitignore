@@ -28,4 +28,12 @@ pids/
 .env
 *.zip
 *.db
-*.db.backup
+!knowledge.db.backup
+
+# TypeScript build info
+*.tsbuildinfo
+
+# Temporary files
+*.tmp
+*.temp
+*.cache
