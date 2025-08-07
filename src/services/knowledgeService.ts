@@ -47,8 +47,17 @@ export async function addLink(url: string): Promise<void> {
 }
 
 export const crawlLink = async (url: string): Promise<any> => {
-  const response = await axios.post(`${BASE_URL}/crawl`, { url });
-  return response.data;
+  try {
+    const response = await axios.post(`${BASE_URL}/crawl`, { url });
+    return response.data;
+  } catch (error: any) {
+    // If the response contains an error message, throw it
+    if (error.response?.data?.error) {
+      throw new Error(error.response.data.error);
+    }
+    // Otherwise throw the original error
+    throw error;
+  }
 };
 
 export const removeLink = async (url: string): Promise<any> => {

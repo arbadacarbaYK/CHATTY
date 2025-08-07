@@ -68,10 +68,30 @@ const KnowledgeAdmin: React.FC = () => {
     setError(null);
     try {
       const toCrawl = links.filter(l => l.status === 'pending' || l.status === 'error');
+      console.log(`Found ${toCrawl.length} URLs to recrawl:`, toCrawl.map(l => ({ url: l.url, status: l.status })));
+      
+      let successCount = 0;
+      let errorCount = 0;
+      
       for (const link of toCrawl) {
-        await crawlLink(link.url);
+        try {
+          console.log(`Crawling: ${link.url} (status: ${link.status})`);
+          await crawlLink(link.url);
+          successCount++;
+        } catch (e: any) {
+          console.error(`Failed to crawl ${link.url}:`, e.message || e);
+          errorCount++;
+          // Continue with next URL instead of stopping
+        }
       }
+      
       await loadLinks();
+      
+      if (errorCount > 0) {
+        setError(`Crawl completed with ${successCount} successes and ${errorCount} failures. Check console for details.`);
+      } else {
+        setError(null);
+      }
     } catch (e: any) {
       setError('Crawl all failed: ' + (e.message || e));
     } finally {
