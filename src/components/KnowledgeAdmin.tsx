@@ -67,7 +67,7 @@ const KnowledgeAdmin: React.FC = () => {
     setIsCrawling(true);
     setError(null);
     try {
-      const toCrawl = links.filter(l => l.status === 'pending' || l.status === 'error');
+      const toCrawl = links.filter(l => l.status === 'pending' || l.status === 'error' || l.status === 'crawling');
       console.log(`Found ${toCrawl.length} URLs to recrawl:`, toCrawl.map(l => ({ url: l.url, status: l.status })));
       
       let successCount = 0;
@@ -122,7 +122,7 @@ const KnowledgeAdmin: React.FC = () => {
           <button
             className="px-4 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 text-white font-semibold hover:from-blue-600 hover:to-purple-600 transition-all disabled:opacity-50"
             onClick={handleCrawlAll}
-            disabled={isCrawling || links.filter(l => l.status === 'pending' || l.status === 'error').length === 0}
+            disabled={isCrawling || links.filter(l => l.status === 'pending' || l.status === 'error' || l.status === 'crawling').length === 0}
           >
             {isCrawling ? 'Crawling...' : 'Crawl All New & Failed'}
           </button>

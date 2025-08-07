@@ -4,7 +4,7 @@ import { config } from '../config/appConfig';
 export interface KnowledgeLink {
   id?: number;
   url: string;
-  status: 'pending' | 'crawled' | 'error';
+  status: 'pending' | 'crawling' | 'crawled' | 'error';
   tags: string[];
   errorMsg?: string;
   content?: string;

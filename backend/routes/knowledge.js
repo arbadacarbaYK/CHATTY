@@ -311,8 +311,8 @@ router.post('/crawl', crawlLimiter, async (req, res) => {
     return res.status(400).json({ error: 'Invalid URL format' });
   }
   
-  // First, ensure the URL exists in the database
-  db.run('INSERT OR IGNORE INTO knowledge (url, status) VALUES (?, ?)', [url, 'crawling']);
+  // First, ensure the URL exists in the database and set status to crawling
+  db.run('INSERT OR REPLACE INTO knowledge (url, status) VALUES (?, ?)', [url, 'crawling']);
   
   try {
     // SECURITY: Enhanced Puppeteer security settings
