@@ -64,29 +64,47 @@ function AppContent() {
         
         setWarmupStatus('Loading AI model into memory...');
         
-        // Send a simple test message to load the model into memory
-        const response = await fetch(`${config.ollama.url}/generate`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            model: config.ollama.model,
-            prompt: 'Hello',
-            stream: false,
-            options: {
-              num_predict: 5,
-              max_tokens: 10,
-              temperature: 0.1,
-            },
-          }),
-        });
+        // Send a proper warmup message to load the model into memory
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minute timeout for warmup
         
-        if (response.ok) {
-          console.log('Model warmup successful');
-          setModelWarmedUp(true);
-          setWarmupStatus('AI model ready');
-        } else {
-          console.warn('Model warmup failed');
-          setWarmupStatus('AI model warmup failed');
+        try {
+          const response = await fetch(`${config.ollama.url}/generate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model: config.ollama.model,
+              prompt: 'You are Satoshe, a friendly Bitcoin education guide. Please respond with a brief welcome message.',
+              stream: false,
+              options: {
+                temperature: 0.7,
+                num_predict: 50,
+                num_ctx: 2048,
+                num_thread: 2,
+              },
+            }),
+            signal: controller.signal,
+          });
+          
+                    clearTimeout(timeoutId);
+          
+          if (response.ok) {
+            console.log('Model warmup successful');
+            setModelWarmedUp(true);
+            setWarmupStatus('AI model ready');
+          } else {
+            console.warn('Model warmup failed');
+            setWarmupStatus('AI model warmup failed');
+          }
+        } catch (error: any) {
+          clearTimeout(timeoutId);
+          if (error.name === 'AbortError') {
+            console.warn('Model warmup timed out');
+            setWarmupStatus('AI model warmup timed out - will load on first use');
+          } else {
+            console.warn('Model warmup failed:', error);
+            setWarmupStatus('AI model warmup failed - will load on first use');
+          }
         }
       } catch (error) {
         console.warn('Model warmup failed, will load on first use:', error);
@@ -179,7 +197,7 @@ function AppContent() {
             <p className="text-white/80 mb-8 text-lg max-w-md">Learn about Bitcoin, Lightning Network, Cashu, and Nostr through interactive conversations with our AI avatars.</p>
             <div className="w-full max-w-md space-y-6">
             <div>
-              <h2 className="text-xl font-semibold text-white mb-4">Select Your Skill Level</h2>
+              <h2 className="text-xl font-semibold text-white mb-4">I am a ..</h2>
               <div className="space-y-3">
                 {(['beginner', 'intermediate', 'advanced'] as SkillLevel[]).map((level) => (
                   <button

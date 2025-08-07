@@ -311,13 +311,21 @@ export const ChatUI: React.FC<ChatUIProps> = ({ skillLevel, onReact, setAvatarSt
       console.log('Chat service response received:', response.response);
       
       // Check if this was a timeout error
-      if (!response.success && response.error === 'Timeout') {
-        const timeoutMessage: Message = {
+      if (!response.success) {
+        let errorMessage = "I'm sorry, there was an error processing your request. Please try again.";
+        
+        if (response.error?.includes('timeout') || response.error?.includes('ECONNABORTED')) {
+          errorMessage = "I'm sorry, the AI model is taking longer than expected to respond. Please try again in a moment.";
+        } else if (response.error?.includes('Network Error') || response.error?.includes('Failed to fetch')) {
+          errorMessage = "I'm sorry, there seems to be a connection issue. Please check if all services are running and try again.";
+        }
+        
+        const errorResponse: Message = {
           sender: "avatar",
-          text: "I'm sorry, the AI model is taking longer than expected to respond. This usually happens on the first request as the model loads into memory. Please try again in a moment.",
+          text: errorMessage,
           timestamp: Date.now(),
         }
-        setMessages((prev) => [...prev, timeoutMessage])
+        setMessages((prev) => [...prev, errorResponse])
         return;
       }
       
@@ -602,15 +610,15 @@ export const ChatUI: React.FC<ChatUIProps> = ({ skillLevel, onReact, setAvatarSt
                   </div>
                 )}
                 <div
-                  className={`px-4 py-3 rounded-lg shadow-sm ${
+                  className={`px-4 py-3 rounded-lg shadow-sm text-left ${
                     message.sender === "user"
                       ? "bg-gradient-to-r from-orange-500 to-yellow-500 text-white"
                       : "bg-black/20 text-orange-100 border border-orange-500/20"
                   }`}
                 >
-                  <div className="text-sm leading-relaxed whitespace-pre-wrap">{message.text}</div>
+                  <div className="text-sm leading-relaxed whitespace-pre-wrap text-left">{message.text}</div>
                   <div
-                    className={`text-xs mt-2 opacity-70 ${
+                    className={`text-xs mt-2 opacity-70 text-left ${
                       message.sender === "user" ? "text-orange-100" : "text-orange-300"
                 }`}
               >
@@ -634,14 +642,13 @@ export const ChatUI: React.FC<ChatUIProps> = ({ skillLevel, onReact, setAvatarSt
                 ₿
               </div>
               <div className="bg-black/20 text-orange-100 px-4 py-3 rounded-lg border border-orange-500/20">
-              <div className="flex space-x-1">
+                <div className="flex space-x-1">
                   <div className="w-2 h-2 bg-orange-400 rounded-full animate-bounce"></div>
                   <div
                     className="w-2 h-2 bg-orange-400 rounded-full animate-bounce"
                     style={{ animationDelay: "0.1s" }}
                   ></div>
-                  <div
-                    className="w-2 h-2 bg-orange-400 rounded-full animate-bounce"
+                  <div className="w-2 h-2 bg-orange-400 rounded-full animate-bounce"
                     style={{ animationDelay: "0.2s" }}
                   ></div>
                 </div>

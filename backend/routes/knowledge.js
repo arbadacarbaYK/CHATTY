@@ -6,8 +6,10 @@ const sqlite3 = require('sqlite3').verbose();
 const router = express.Router();
 const puppeteer = require('puppeteer');
 
-// SQLite DB setup
-const db = new sqlite3.Database('./knowledge.db');
+// SQLite DB setup - Use the populated database from the root directory
+const path = require('path');
+const dbPath = path.join(__dirname, '..', '..', 'knowledge.db');
+const db = new sqlite3.Database(dbPath);
 db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS knowledge (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -220,15 +222,35 @@ router.get('/search', (req, res) => {
   const { q } = req.query;
   if (!q) return res.status(400).json({ error: 'Missing query parameter' });
   
+  // Split query into words for more flexible matching
+  const queryWords = q.toLowerCase().split(/\s+/).filter(word => word.length > 2);
   const query = `%${q}%`;
-  db.all(
-    'SELECT * FROM knowledge WHERE content LIKE ? OR tags LIKE ? OR url LIKE ? ORDER BY updatedAt DESC LIMIT 10',
-    [query, query, query],
-    (err, rows) => {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json({ results: rows });
-    }
-  );
+  
+  // Build a more flexible query that matches any of the query words
+  let sqlQuery = 'SELECT * FROM knowledge WHERE ';
+  let params = [];
+  
+  if (queryWords.length > 1) {
+    // Multiple words - match any word in content, tags, or URL
+    const conditions = [];
+    queryWords.forEach(word => {
+      const wordPattern = `%${word}%`;
+      conditions.push('(LOWER(content) LIKE ? OR LOWER(tags) LIKE ? OR LOWER(url) LIKE ?)');
+      params.push(wordPattern, wordPattern, wordPattern);
+    });
+    sqlQuery += conditions.join(' OR ');
+  } else {
+    // Single word - use original pattern
+    sqlQuery += 'LOWER(content) LIKE ? OR LOWER(tags) LIKE ? OR LOWER(url) LIKE ?';
+    params.push(query, query, query);
+  }
+  
+  sqlQuery += ' ORDER BY updatedAt DESC LIMIT 10';
+  
+  db.all(sqlQuery, params, (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ results: rows });
+  });
 });
 
 // DELETE /knowledge/remove { url }

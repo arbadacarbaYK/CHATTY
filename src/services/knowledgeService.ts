@@ -23,7 +23,7 @@ const getBackendUrl = (): string => {
   if (isDev) {
     return '/knowledge'; // Use Vite proxy in development
   } else {
-    return 'http://localhost:3000'; // Default for production
+    return 'http://localhost:3000/knowledge'; // Default for production
   }
 };
 

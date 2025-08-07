@@ -1,0 +1,17 @@
+{
+  "name": "Bitcoin Education Roleplay",
+  "short_name": "Bitcoin Edu",
+  "description": "Interactive Bitcoin education with AI avatar",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#f97316",
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+} 

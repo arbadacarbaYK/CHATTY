@@ -24,7 +24,7 @@ export const defaultConfig: AppConfig = {
   ollama: {
     url: import.meta.env.DEV ? '/api' : 'http://localhost:11434', // Use proxy in dev, direct URL in prod
     model: 'llama3.2:3b', // Llama 3.2 3B - faster on 4-core systems
-    timeout: 120000, // 2 minutes - increased timeout for model loading and generation
+    timeout: 300000, // 5 minutes - increased timeout for first request after model load
   },
   avatar: {
     defaultModel: 'kei',

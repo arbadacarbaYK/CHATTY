@@ -23,7 +23,7 @@ NC='\033[0m' # No Color
 
 # Configuration
 BACKEND_PORT=3000
-FRONTEND_PORT=5174
+FRONTEND_PORT=5173
 OLLAMA_PORT=11434
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKEND_DIR="$PROJECT_DIR/backend"
@@ -84,6 +84,12 @@ start_ollama() {
     # Check if Ollama is already running
     if is_port_in_use $OLLAMA_PORT; then
         log "${YELLOW}Ollama is already running on port $OLLAMA_PORT${NC}"
+        # Update PID file with current Ollama process
+        local current_pid=$(pgrep -f "ollama serve" | head -1)
+        if [ -n "$current_pid" ]; then
+            echo $current_pid > "$PID_DIR/ollama.pid"
+            log "${GREEN}Updated Ollama PID to $current_pid${NC}"
+        fi
         return 0
     fi
     
@@ -115,11 +121,9 @@ start_backend() {
     # Kill existing backend if running
     kill_by_pid_file "$PID_DIR/backend.pid" "Backend"
     
-    # Wait for port to be free
-    while is_port_in_use $BACKEND_PORT; do
-        log "${YELLOW}Waiting for port $BACKEND_PORT to be free...${NC}"
-        sleep 1
-    done
+    # Force kill any remaining backend processes
+    pkill -f "node.*bin/www" 2>/dev/null || true
+    sleep 2
     
     # Start backend
     cd "$BACKEND_DIR"
@@ -150,11 +154,10 @@ start_frontend() {
     # Kill existing frontend if running
     kill_by_pid_file "$PID_DIR/frontend.pid" "Frontend"
     
-    # Wait for port to be free
-    while is_port_in_use $FRONTEND_PORT; do
-        log "${YELLOW}Waiting for port $FRONTEND_PORT to be free...${NC}"
-        sleep 1
-    done
+    # Force kill any remaining frontend processes
+    pkill -f "npm run dev" 2>/dev/null || true
+    pkill -f "vite" 2>/dev/null || true
+    sleep 2
     
     # Start frontend
     cd "$PROJECT_DIR"
@@ -183,30 +186,52 @@ monitor_services() {
     log "${GREEN}Starting service monitor...${NC}"
     
     while true; do
-        # Check Ollama
+        # Check Ollama - use actual running process if PID file is stale
+        local ollama_pid=""
         if [ -f "$PID_DIR/ollama.pid" ]; then
-            local ollama_pid=$(cat "$PID_DIR/ollama.pid")
-            if ! kill -0 "$ollama_pid" 2>/dev/null || ! check_service_health "http://localhost:$OLLAMA_PORT/api/tags" "Ollama" 2; then
-                log "${YELLOW}Ollama health check failed, restarting...${NC}"
+            ollama_pid=$(cat "$PID_DIR/ollama.pid")
+        fi
+        
+        # If PID file doesn't exist or process is dead, check for actual running Ollama
+        if [ -z "$ollama_pid" ] || ! kill -0 "$ollama_pid" 2>/dev/null; then
+            local actual_pid=$(pgrep -f "ollama serve" | head -1)
+            if [ -n "$actual_pid" ]; then
+                # Update PID file with actual running process
+                echo $actual_pid > "$PID_DIR/ollama.pid"
+                ollama_pid=$actual_pid
+                log "${GREEN}Updated Ollama PID to $actual_pid${NC}"
+            else
+                log "${YELLOW}Ollama process not found, restarting...${NC}"
                 start_ollama
+            fi
+        fi
+        
+        # Only check health if we have a valid PID
+        if [ -n "$ollama_pid" ] && kill -0 "$ollama_pid" 2>/dev/null; then
+            if ! check_service_health "http://localhost:$OLLAMA_PORT/api/tags" "Ollama" 2; then
+                log "${YELLOW}Ollama health check failed, but process exists. Checking again in 30s...${NC}"
             fi
         fi
         
         # Check Backend
         if [ -f "$PID_DIR/backend.pid" ]; then
             local backend_pid=$(cat "$PID_DIR/backend.pid")
-            if ! kill -0 "$backend_pid" 2>/dev/null || ! check_service_health "http://localhost:$BACKEND_PORT/knowledge/all" "Backend" 2; then
-                log "${YELLOW}Backend health check failed, restarting...${NC}"
+            if ! kill -0 "$backend_pid" 2>/dev/null; then
+                log "${YELLOW}Backend process not found, restarting...${NC}"
                 start_backend
+            elif ! check_service_health "http://localhost:$BACKEND_PORT/knowledge/all" "Backend" 2; then
+                log "${YELLOW}Backend health check failed, but process exists. Checking again in 30s...${NC}"
             fi
         fi
         
         # Check Frontend
         if [ -f "$PID_DIR/frontend.pid" ]; then
             local frontend_pid=$(cat "$PID_DIR/frontend.pid")
-            if ! kill -0 "$frontend_pid" 2>/dev/null || ! check_service_health "http://localhost:$FRONTEND_PORT" "Frontend" 2; then
-                log "${YELLOW}Frontend health check failed, restarting...${NC}"
+            if ! kill -0 "$frontend_pid" 2>/dev/null; then
+                log "${YELLOW}Frontend process not found, restarting...${NC}"
                 start_frontend
+            elif ! check_service_health "http://localhost:$FRONTEND_PORT" "Frontend" 2; then
+                log "${YELLOW}Frontend health check failed, but process exists. Checking again in 30s...${NC}"
             fi
         fi
         
@@ -223,6 +248,13 @@ stop_all() {
     kill_by_pid_file "$PID_DIR/frontend.pid" "Frontend"
     kill_by_pid_file "$PID_DIR/monitor.pid" "Monitor"
     
+    # Force kill any remaining processes
+    pkill -f "ollama serve" 2>/dev/null || true
+    pkill -f "node.*bin/www" 2>/dev/null || true
+    pkill -f "npm run dev" 2>/dev/null || true
+    pkill -f "vite" 2>/dev/null || true
+    
+    sleep 2
     log "${GREEN}All services stopped${NC}"
 }
 
@@ -284,6 +316,38 @@ show_status() {
     echo -e "Ollama:   ${GREEN}http://localhost:$OLLAMA_PORT${NC}"
 }
 
+# Function to check and install dependencies
+check_dependencies() {
+  log "${GREEN}Checking dependencies...${NC}"
+  
+  # Check if node_modules exists
+  if [ ! -d "node_modules" ]; then
+    log "${YELLOW}Installing frontend dependencies...${NC}"
+    npm install
+  fi
+  
+  # Check if backend node_modules exists
+  if [ ! -d "backend/node_modules" ]; then
+    log "${YELLOW}Installing backend dependencies...${NC}"
+    cd backend && npm install && cd ..
+  fi
+  
+  # Verify critical dependencies
+  if ! npm list react-router-dom >/dev/null 2>&1; then
+    log "${YELLOW}Installing missing react-router-dom...${NC}"
+    npm install react-router-dom
+  fi
+  
+  # Ensure populated knowledge database is available
+  if [ ! -f "knowledge.db" ]; then
+    log "${RED}ERROR: Populated knowledge database not found!${NC}"
+    log "${RED}Please ensure knowledge.db exists in the project root.${NC}"
+    return 1
+  fi
+  
+  log "${GREEN}Dependencies check complete${NC}"
+}
+
 # Main script logic
 case "${1:-start}" in
     start)
@@ -291,6 +355,9 @@ case "${1:-start}" in
         
         # Stop any existing services first
         stop_all
+        
+        # Check and install dependencies
+        check_dependencies
         
         # Start services
         start_ollama || exit 1

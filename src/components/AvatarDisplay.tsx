@@ -77,7 +77,6 @@ export const AvatarDisplay: React.FC<AvatarDisplayProps> = ({ glbUrl, cameraOrbi
   }, []);
 
   useEffect(() => {
-    console.log('AvatarDisplay glbUrl:', glbUrl);
   }, [glbUrl]);
 
   useEffect(() => {
@@ -130,16 +129,20 @@ export const AvatarDisplay: React.FC<AvatarDisplayProps> = ({ glbUrl, cameraOrbi
           className={animClass}
           src={glbUrl}
           alt="Ready Player Me Avatar"
-          camera-controls
           crossorigin="anonymous"
           style={{ width: '100%', height: '100%', background: 'transparent', objectFit: 'contain', filter: animClass ? 'drop-shadow(0 0 16px orange)' : undefined }}
           camera-orbit="0deg 90deg 5.5m"
           field-of-view="30deg"
           exposure="1.1"
-          shadow-intensity="1"
+          shadow-intensity="0.3"
           ar
           camera-target="0m 1m 0m"
-          disable-zoom={false}
+          disable-zoom={true}
+          camera-controls={false}
+          loading="lazy"
+          reveal="auto"
+          auto-rotate-delay="0"
+          interaction-prompt="none"
           onError={() => {
             console.error('Failed to load model:', glbUrl);
             setReady(false);

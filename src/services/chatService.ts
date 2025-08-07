@@ -211,7 +211,7 @@ ${avatarName}:`;
         
         // If search returns results, use them
         if (searchResults.length > 0) {
-          return searchResults.slice(0, 3); // Limit to top 3 most relevant sources
+          return searchResults.slice(0, 5); // Limit to top 5 most relevant sources
         }
         
         // Fallback to client-side filtering if search returns no results
@@ -230,7 +230,7 @@ ${avatarName}:`;
           })
           .filter(knowledge => knowledge.relevanceScore > 0)
           .sort((a, b) => b.relevanceScore - a.relevanceScore)
-          .slice(0, 3); // Limit to top 3 most relevant sources
+          .slice(0, 5); // Limit to top 5 most relevant sources
         
         return relevantKnowledge;
       })();
@@ -248,7 +248,8 @@ ${avatarName}:`;
     // Add knowledge context if available
     let knowledgeContext = '';
     if (relevantKnowledge.length > 0) {
-      knowledgeContext = '\n\nRelevant knowledge from your knowledge base:\n';
+      knowledgeContext = '\n\nYou have access to a comprehensive knowledge base about Bitcoin and related technologies. Use this information to provide accurate, helpful recommendations. When users ask about specific tools, services, or technologies, consider their needs and preferences to provide personalized guidance.\n\n';
+      knowledgeContext += 'Available knowledge sources:\n';
       relevantKnowledge.forEach((knowledge, index) => {
         knowledgeContext += `${index + 1}. Source: ${knowledge.url}\n`;
         knowledgeContext += `   Tags: ${knowledge.tags.join(', ')}\n`;
@@ -262,15 +263,15 @@ ${avatarName}:`;
             .replace(/\b(\w+)\s+\1\b/g, '$1') // Remove consecutive duplicate words
             .replace(/([^\s]+)\s+\1/g, '$1'); // Remove consecutive duplicate phrases
           
-          // Include a preview of the cleaned content (first 200 characters)
-          const contentPreview = cleanedContent.substring(0, 200);
+          // Include a preview of the cleaned content (first 300 characters for more context)
+          const contentPreview = cleanedContent.substring(0, 300);
           if (contentPreview) {
-            knowledgeContext += `   Content: ${contentPreview}${cleanedContent.length > 200 ? '...' : ''}\n`;
+            knowledgeContext += `   Content: ${contentPreview}${cleanedContent.length > 300 ? '...' : ''}\n`;
           }
         }
         knowledgeContext += '\n';
       });
-      knowledgeContext += 'Use this knowledge to provide more accurate and up-to-date information when relevant to the user\'s question.\n';
+      knowledgeContext += 'Use this knowledge to provide comprehensive, accurate recommendations. Consider user preferences and needs when making suggestions.\n';
     }
 
     const skillPrompts = {
