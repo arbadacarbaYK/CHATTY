@@ -211,7 +211,7 @@ ${avatarName}:`;
         
         // If search returns results, use them
         if (searchResults.length > 0) {
-          return searchResults.slice(0, 5); // Limit to top 5 most relevant sources
+          return searchResults.slice(0, 10); // Use top 10 most relevant sources
         }
         
         // Fallback to client-side filtering if search returns no results
@@ -230,7 +230,7 @@ ${avatarName}:`;
           })
           .filter(knowledge => knowledge.relevanceScore > 0)
           .sort((a, b) => b.relevanceScore - a.relevanceScore)
-          .slice(0, 5); // Limit to top 5 most relevant sources
+          .slice(0, 10); // Use top 10 most relevant sources
         
         return relevantKnowledge;
       })();
