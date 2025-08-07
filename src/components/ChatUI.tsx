@@ -57,6 +57,7 @@ export const ChatUI: React.FC<ChatUIProps> = ({ skillLevel, onReact, setAvatarSt
   const [ollamaLoading, setOllamaLoading] = useState(true);
   const [connectionStatus, setConnectionStatus] = useState<string>('Checking connections...');
   const [showConnectionAlert, setShowConnectionAlert] = useState(false);
+  const [isSending, setIsSending] = useState(false); // Add flag to prevent duplicate sends
 
   const recognitionRef = useRef<any>(null)
   const synthRef = useRef<SpeechSynthesis | null>(null)
@@ -278,7 +279,7 @@ export const ChatUI: React.FC<ChatUIProps> = ({ skillLevel, onReact, setAvatarSt
   }
 
   const handleSend = async (text: string) => {
-    if (!text.trim()) return
+    if (!text.trim() || isSending) return // Prevent duplicate sends
 
     if (text.length > config.ui.maxMessageLength) {
       alert(`Message too long. Maximum ${config.ui.maxMessageLength} characters allowed.`)
@@ -294,6 +295,8 @@ export const ChatUI: React.FC<ChatUIProps> = ({ skillLevel, onReact, setAvatarSt
       setIsLoading(false);
       return;
     }
+
+    setIsSending(true) // Set flag to prevent duplicate calls
 
     const userMessage: Message = { 
       sender: "user",
@@ -358,6 +361,7 @@ export const ChatUI: React.FC<ChatUIProps> = ({ skillLevel, onReact, setAvatarSt
       setMessages((prev) => [...prev, errorMessage])
     } finally {
       setIsLoading(false)
+      setIsSending(false) // Reset flag when done
     }
   }
 

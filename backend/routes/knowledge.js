@@ -226,26 +226,43 @@ router.get('/search', (req, res) => {
   const queryWords = q.toLowerCase().split(/\s+/).filter(word => word.length > 2);
   const query = `%${q}%`;
   
-  // Build a more flexible query that matches any of the query words
-  let sqlQuery = 'SELECT * FROM knowledge WHERE ';
+  // Build a more intelligent query that prioritizes entries matching all words
+  let sqlQuery = '';
   let params = [];
   
   if (queryWords.length > 1) {
-    // Multiple words - match any word in content, tags, or URL
-    const conditions = [];
+    // Multiple words - first get entries that match ALL words (higher priority)
+    const allMatchConditions = [];
     queryWords.forEach(word => {
       const wordPattern = `%${word}%`;
-      conditions.push('(LOWER(content) LIKE ? OR LOWER(tags) LIKE ? OR LOWER(url) LIKE ?)');
+      allMatchConditions.push('(LOWER(content) LIKE ? OR LOWER(tags) LIKE ? OR LOWER(url) LIKE ?)');
       params.push(wordPattern, wordPattern, wordPattern);
     });
-    sqlQuery += conditions.join(' OR ');
+    
+    // Then get entries that match ANY word (lower priority)
+    const anyMatchConditions = [];
+    queryWords.forEach(word => {
+      const wordPattern = `%${word}%`;
+      anyMatchConditions.push('(LOWER(content) LIKE ? OR LOWER(tags) LIKE ? OR LOWER(url) LIKE ?)');
+      params.push(wordPattern, wordPattern, wordPattern);
+    });
+    
+    sqlQuery = `
+      SELECT *, 
+        CASE 
+          WHEN (${allMatchConditions.join(' AND ')}) THEN 1
+          ELSE 2
+        END as priority
+      FROM knowledge 
+      WHERE (${anyMatchConditions.join(' OR ')})
+      ORDER BY priority ASC, updatedAt DESC 
+      LIMIT 15
+    `;
   } else {
     // Single word - use original pattern
-    sqlQuery += 'LOWER(content) LIKE ? OR LOWER(tags) LIKE ? OR LOWER(url) LIKE ?';
+    sqlQuery = 'SELECT * FROM knowledge WHERE LOWER(content) LIKE ? OR LOWER(tags) LIKE ? OR LOWER(url) LIKE ? ORDER BY updatedAt DESC LIMIT 10';
     params.push(query, query, query);
   }
-  
-  sqlQuery += ' ORDER BY updatedAt DESC LIMIT 10';
   
   db.all(sqlQuery, params, (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
