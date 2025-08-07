@@ -14,6 +14,7 @@
     "keyword-extractor": "^0.0.28",
     "morgan": "~1.9.1",
     "node-fetch": "^2.7.0",
-    "sqlite3": "^5.1.7"
+    "sqlite3": "^5.1.7",
+    "xml2js": "^0.6.2"
   }
 }
