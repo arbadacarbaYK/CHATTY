@@ -396,16 +396,16 @@ router.get('/search', (req, res) => {
     const allMatchConditions = [];
     queryWords.forEach(word => {
       const wordPattern = `%${word}%`;
-      allMatchConditions.push('(LOWER(content) LIKE ? OR LOWER(tags) LIKE ? OR LOWER(url) LIKE ?)');
-      params.push(wordPattern, wordPattern, wordPattern);
+      allMatchConditions.push('(LOWER(content) LIKE ? OR LOWER(tags) LIKE ? OR LOWER(url) LIKE ? OR LOWER(metadata) LIKE ?)');
+      params.push(wordPattern, wordPattern, wordPattern, wordPattern);
     });
     
     // Then get entries that match ANY word (lower priority)
     const anyMatchConditions = [];
     queryWords.forEach(word => {
       const wordPattern = `%${word}%`;
-      anyMatchConditions.push('(LOWER(content) LIKE ? OR LOWER(tags) LIKE ? OR LOWER(url) LIKE ?)');
-      params.push(wordPattern, wordPattern, wordPattern);
+      anyMatchConditions.push('(LOWER(content) LIKE ? OR LOWER(tags) LIKE ? OR LOWER(url) LIKE ? OR LOWER(metadata) LIKE ?)');
+      params.push(wordPattern, wordPattern, wordPattern, wordPattern);
     });
     
     sqlQuery = `
@@ -421,8 +421,8 @@ router.get('/search', (req, res) => {
     `;
   } else {
     // Single word - use original pattern
-    sqlQuery = 'SELECT * FROM knowledge WHERE LOWER(content) LIKE ? OR LOWER(tags) LIKE ? OR LOWER(url) LIKE ? ORDER BY updatedAt DESC LIMIT 10';
-    params.push(query, query, query);
+    sqlQuery = 'SELECT * FROM knowledge WHERE LOWER(content) LIKE ? OR LOWER(tags) LIKE ? OR LOWER(url) LIKE ? OR LOWER(metadata) LIKE ? ORDER BY updatedAt DESC LIMIT 10';
+    params.push(query, query, query, query);
   }
   
   db.all(sqlQuery, params, (err, rows) => {
