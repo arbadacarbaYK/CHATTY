@@ -336,74 +336,25 @@ router.post('/crawl', crawlLimiter, async (req, res) => {
     
     // Extract enhanced content and metadata
     const enhancedContent = await extractEnhancedContent(page, url);
+    const content = enhancedContent.visibleText || '';
+    const metadata = {
+      comments: enhancedContent.comments || [],
+      socialLinks: enhancedContent.socialLinks || [],
+      emails: enhancedContent.emails || [],
+      marketingTags: enhancedContent.marketingTags || [],
+      title: enhancedContent.title || '',
+      metaDescription: enhancedContent.metaDescription || ''
+    };
     
-    // Special handling for different website types
-    let mainText = enhancedContent.visibleText;
-    
-    // GitHub repository handling
-    if (url.includes('github.com')) {
-      try {
-        await page.waitForTimeout(2000);
-        
-        const repoDescription = await page.$eval('.repository-content .description, .js-repo-root .description, .repohead .description', el => el.textContent).catch(() => '');
-        const readmeContent = await page.$eval('.markdown-body, .readme, [data-testid="readme"]', el => el.textContent).catch(() => '');
-        const repoName = await page.$eval('.repository-content h1, .js-repo-root h1, .repohead h1', el => el.textContent).catch(() => '');
-        
-        if (readmeContent && readmeContent.length > 100) {
-          mainText = readmeContent;
-        } else if (repoDescription && repoDescription.length > 20) {
-          mainText = `${repoDescription} ${repoName || enhancedContent.title}`;
-        } else {
-          const mainContent = await page.$eval('main, .repository-content, .js-repo-root', el => el.textContent).catch(() => '');
-          if (mainContent && mainContent.length > 50) {
-            mainText = mainContent;
-          } else {
-            mainText = enhancedContent.title;
-          }
-        }
-      } catch (e) {
-        mainText = enhancedContent.title;
-      }
-    }
-    // Bitcoin-related sites
-    else if (url.includes('bitcoin') || url.includes('lightning') || url.includes('nostr')) {
-      if (!mainText || mainText.length < 100) {
-        mainText = `${enhancedContent.metaDescription} ${enhancedContent.title}`.trim();
-      }
-    }
-    // General fallback
-    else if (!mainText || mainText.length < 100) {
-      mainText = `${enhancedContent.metaDescription} ${enhancedContent.title}`.trim();
-    }
-    
-    // Extract first few meaningful sentences for a concise summary
-    if (mainText && mainText.length > 50) {
-      const sentences = mainText.split(/[.!?]+/).filter(s => s.trim().length > 10);
-      mainText = sentences.slice(0, 2).join('. ').trim() + '.';
-      
-      if (mainText.length > 200) {
-        mainText = mainText.substring(0, 200).replace(/\s+\w*$/, '') + '...';
-      }
-    }
     await browser.close();
     
     // Clean the content before storing
-    const cleanedContent = mainText
+    const cleanedContent = content
       .replace(/[\n\r\t]+/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
     
-    // Prepare metadata for storage
-    const metadata = {
-      socialLinks: enhancedContent.socialLinks,
-      emails: enhancedContent.emails,
-      marketingTags: enhancedContent.marketingTags,
-      comments: enhancedContent.comments.slice(0, 5), // Limit comments
-      title: enhancedContent.title,
-      metaDescription: enhancedContent.metaDescription
-    };
-    
-    const tags = extractTags(cleanedContent, url, metadata);
+    const tags = await extractTags(cleanedContent, url, metadata);
     db.run('UPDATE knowledge SET status=?, tags=?, content=?, metadata=?, errorMsg=NULL, updatedAt=CURRENT_TIMESTAMP WHERE url=?', [
       'crawled',
       JSON.stringify(tags),
