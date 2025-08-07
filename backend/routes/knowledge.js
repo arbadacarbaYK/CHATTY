@@ -7,6 +7,25 @@ const router = express.Router();
 const puppeteer = require('puppeteer');
 const xml2js = require('xml2js');
 
+// SECURITY: Rate limiting for crawler endpoints
+const rateLimit = require('express-rate-limit');
+
+const crawlLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // limit each IP to 10 requests per windowMs
+  message: 'Too many crawl requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const discoverLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // limit each IP to 5 discovery requests per windowMs
+  message: 'Too many discovery requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // Helper: parse robots.txt and extract sitemap URLs
 async function parseRobotsTxt(baseUrl) {
   try {
@@ -90,20 +109,29 @@ db.serialize(() => {
 // Helper: extract enhanced content and metadata
 async function extractEnhancedContent(page, url) {
   const content = await page.evaluate(() => {
-    // Extract visible text
+    // REFACTORED: Improved text extraction with better error handling
     function getVisibleText(element) {
       if (!element) return '';
-      if (element.nodeType === Node.TEXT_NODE) {
-        return element.textContent.trim();
+      
+      try {
+        if (element.nodeType === Node.TEXT_NODE) {
+          return element.textContent?.trim() || '';
+        }
+        
+        if (element.nodeType !== Node.ELEMENT_NODE) return '';
+        
+        const style = window.getComputedStyle(element);
+        if (style && (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0')) return '';
+        
+        let text = '';
+        for (const child of element.childNodes) {
+          text += getVisibleText(child) + ' ';
+        }
+        return text.trim();
+      } catch (error) {
+        console.warn('Error extracting text from element:', error);
+        return '';
       }
-      if (element.nodeType !== Node.ELEMENT_NODE) return '';
-      const style = window.getComputedStyle(element);
-      if (style && (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0')) return '';
-      let text = '';
-      for (const child of element.childNodes) {
-        text += getVisibleText(child) + ' ';
-      }
-      return text.trim();
     }
 
     // Extract HTML comments
@@ -178,6 +206,11 @@ async function extractEnhancedContent(page, url) {
 
 // Helper: extract tags from content with enhanced metadata
 function extractTags(content, url, metadata = {}) {
+  // SECURITY: Handle undefined content
+  if (!content || typeof content !== 'string') {
+    content = '';
+  }
+  
   const staticTags = ['bitcoin', 'lightning', 'nostr', 'hardware', 'software', 'cashu', 'wallet', 'node', 'api', 'extension', 'protocol'];
   
   // Find static tags first
@@ -257,15 +290,46 @@ router.post('/add', (req, res) => {
 });
 
 // POST /knowledge/crawl { url }
-router.post('/crawl', async (req, res) => {
+router.post('/crawl', crawlLimiter, async (req, res) => {
   const { url } = req.body;
   if (!url) return res.status(400).json({ error: 'Missing url' });
+  
+  // SECURITY: Validate URL format and protocol
+  try {
+    const urlObj = new URL(url);
+    if (!['http:', 'https:'].includes(urlObj.protocol)) {
+      return res.status(400).json({ error: 'Invalid URL protocol. Only HTTP and HTTPS are allowed.' });
+    }
+    
+    // SECURITY: Prevent SSRF attacks by blocking internal/localhost URLs
+    const hostname = urlObj.hostname.toLowerCase();
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0' || 
+        hostname.startsWith('192.168.') || hostname.startsWith('10.') || hostname.startsWith('172.')) {
+      return res.status(400).json({ error: 'Local/internal URLs are not allowed for security reasons.' });
+    }
+  } catch (error) {
+    return res.status(400).json({ error: 'Invalid URL format' });
+  }
   
   // First, ensure the URL exists in the database
   db.run('INSERT OR IGNORE INTO knowledge (url, status) VALUES (?, ?)', [url, 'crawling']);
   
   try {
-    const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+    // SECURITY: Enhanced Puppeteer security settings
+    const browser = await puppeteer.launch({ 
+      headless: 'new', 
+      args: [
+        '--no-sandbox', 
+        '--disable-setuid-sandbox',
+        '--disable-web-security',
+        '--disable-features=VizDisplayCompositor',
+        '--disable-dev-shm-usage',
+        '--no-first-run',
+        '--no-zygote',
+        '--single-process',
+        '--disable-gpu'
+      ] 
+    });
     const page = await browser.newPage();
     await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
     await page.waitForSelector('body', { timeout: 10000 });
@@ -383,9 +447,15 @@ router.get('/search', (req, res) => {
   const { q } = req.query;
   if (!q) return res.status(400).json({ error: 'Missing query parameter' });
   
+  // SECURITY: Sanitize and validate search query
+  const sanitizedQuery = q.toString().trim().slice(0, 100); // Limit query length
+  if (!sanitizedQuery || sanitizedQuery.length < 2) {
+    return res.status(400).json({ error: 'Search query must be at least 2 characters long' });
+  }
+  
   // Split query into words for more flexible matching
-  const queryWords = q.toLowerCase().split(/\s+/).filter(word => word.length > 2);
-  const query = `%${q}%`;
+  const queryWords = sanitizedQuery.toLowerCase().split(/\s+/).filter(word => word.length > 2);
+  const query = `%${sanitizedQuery}%`;
   
   // Build a more intelligent query that prioritizes entries matching all words
   let sqlQuery = '';
@@ -450,7 +520,7 @@ router.delete('/clear', (req, res) => {
 });
 
 // POST /knowledge/discover - Discover URLs from robots.txt and sitemaps
-router.post('/discover', async (req, res) => {
+router.post('/discover', discoverLimiter, async (req, res) => {
   const { url } = req.body;
   if (!url) return res.status(400).json({ error: 'Missing url' });
   
@@ -504,6 +574,121 @@ router.post('/discover', async (req, res) => {
     console.error('Error discovering URLs:', error);
     res.status(500).json({ error: error.message });
   }
+});
+
+// POST /knowledge/bulk-crawl - Bulk crawl operation (no rate limiting for admin operations)
+router.post('/bulk-crawl', async (req, res) => {
+  const { urls } = req.body;
+  if (!urls || !Array.isArray(urls)) {
+    return res.status(400).json({ error: 'Missing urls array' });
+  }
+  
+  const results = [];
+  const errors = [];
+  
+  for (let i = 0; i < urls.length; i++) {
+    const url = urls[i];
+    
+    // Add delay between requests to avoid overwhelming the system
+    if (i > 0) {
+      await new Promise(resolve => setTimeout(resolve, 3000)); // 3 second delay
+    }
+    
+    try {
+      // SECURITY: Validate each URL
+      const urlObj = new URL(url);
+      if (!['http:', 'https:'].includes(urlObj.protocol)) {
+        errors.push({ url, error: 'Invalid URL protocol' });
+        continue;
+      }
+      
+      const hostname = urlObj.hostname.toLowerCase();
+      if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0' || 
+          hostname.startsWith('192.168.') || hostname.startsWith('10.') || hostname.startsWith('172.')) {
+        errors.push({ url, error: 'Local/internal URLs not allowed' });
+        continue;
+      }
+      
+      // Use the existing crawl logic by calling the crawl function directly
+      const browser = await puppeteer.launch({ 
+        headless: 'new', 
+        args: [
+          '--no-sandbox', 
+          '--disable-setuid-sandbox',
+          '--disable-web-security',
+          '--disable-features=VizDisplayCompositor',
+          '--disable-dev-shm-usage',
+          '--no-first-run',
+          '--no-zygote',
+          '--single-process',
+          '--disable-gpu'
+        ] 
+      });
+      
+      try {
+        const page = await browser.newPage();
+        await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
+        
+        const enhancedContent = await extractEnhancedContent(page, url);
+        const content = enhancedContent.visibleText || '';
+        const metadata = {
+          comments: enhancedContent.comments || [],
+          socialLinks: enhancedContent.socialLinks || [],
+          emails: enhancedContent.emails || [],
+          marketingTags: enhancedContent.marketingTags || [],
+          title: enhancedContent.title || '',
+          metaDescription: enhancedContent.metaDescription || ''
+        };
+        
+        const tags = await extractTags(content, url, metadata);
+        
+        // Update the database
+        const stmt = db.prepare(`
+          INSERT OR REPLACE INTO knowledge (url, status, tags, content, metadata, updatedAt) 
+          VALUES (?, 'success', ?, ?, ?, CURRENT_TIMESTAMP)
+        `);
+        stmt.run(url, JSON.stringify(tags), content, JSON.stringify(metadata));
+        stmt.finalize();
+        
+        results.push({ url, success: true, tags, preview: content.substring(0, 100) });
+        
+      } catch (pageError) {
+        console.error(`Error processing page ${url}:`, pageError.message);
+        errors.push({ url, error: pageError.message });
+        
+        // Update database with error
+        const stmt = db.prepare(`
+          INSERT OR REPLACE INTO knowledge (url, status, errorMsg, updatedAt) 
+          VALUES (?, 'error', ?, CURRENT_TIMESTAMP)
+        `);
+        stmt.run(url, pageError.message);
+        stmt.finalize();
+      } finally {
+        await browser.close();
+      }
+      
+    } catch (error) {
+      console.error(`Error crawling ${url}:`, error.message);
+      errors.push({ url, error: error.message });
+      
+      // Update database with error
+      const stmt = db.prepare(`
+        INSERT OR REPLACE INTO knowledge (url, status, errorMsg, updatedAt) 
+        VALUES (?, 'error', ?, CURRENT_TIMESTAMP)
+      `);
+      stmt.run(url, error.message);
+      stmt.finalize();
+    }
+  }
+  
+  res.json({
+    success: true,
+    total: urls.length,
+    successful: results.length,
+    failed: errors.length,
+    results,
+    errors
+  });
 });
 
 module.exports = router; 

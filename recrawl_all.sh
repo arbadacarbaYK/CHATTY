@@ -12,7 +12,7 @@ CURRENT=0
 
 echo "Found $TOTAL entries to recrawl"
 
-# Process each URL
+# Process each URL with rate limiting awareness
 echo "$URLS" | while read -r url; do
     if [ -n "$url" ]; then
         CURRENT=$((CURRENT + 1))
@@ -29,10 +29,16 @@ echo "$URLS" | while read -r url; do
         else
             error=$(echo "$response" | jq -r '.error // "Unknown error"')
             echo "  ❌ Failed: $error"
+            
+            # If rate limited, wait longer
+            if echo "$error" | grep -q "Too many crawl requests"; then
+                echo "  ⏳ Rate limited, waiting 15 minutes..."
+                sleep 900  # Wait 15 minutes
+            fi
         fi
         
-        # Small delay to avoid overwhelming the server
-        sleep 1
+        # Longer delay to respect rate limits (10 requests per 15 minutes = 90 seconds between requests)
+        sleep 90
     fi
 done
 
@@ -42,4 +48,4 @@ echo "Checking final quality..."
 # Show some sample results
 echo ""
 echo "Sample of improved entries:"
-curl -s http://localhost:3000/knowledge/all | jq '.knowledge[0:5] | .[] | {url: .url, content: (.content | .[0:100] + "..."), tags: .tags}' 
+curl -s http://localhost:3000/knowledge/all | jq '.knowledge[0:5] | .[] | {url: .url, content: (.content | .[0:100] + "..."), tags: .tags}'
