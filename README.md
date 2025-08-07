@@ -2,6 +2,9 @@
 
 An interactive web-based education platform featuring a 3D avatar (GLB model) that teaches users about Bitcoin, Lightning Network, and Nostr through engaging conversations.
 
+<img width="800" alt="Screenshot from 2025-08-07 13-04-57" src="https://github.com/user-attachments/assets/5ef912ce-70e1-48e4-83a3-0fc7b345665e" />
+<img width="800" alt="Screenshot from 2025-08-07 13-05-34" src="https://github.com/user-attachments/assets/6aac62bc-5f7e-4068-a785-6540d97fe5cd" />
+
 ## Features
 
 - **3D Avatar Rendering**: Uses `<model-viewer>` to display GLB avatars (e.g., Ready Player Me)
@@ -22,6 +25,8 @@ An interactive web-based education platform featuring a 3D avatar (GLB model) th
 - **Avatar Technology**: `<model-viewer>` with GLB models (Ready Player Me or similar)
 - **AI Integration**: Ollama with local models (completely free!)
 - **Build Tools**: npm/npx, Vite, PostCSS, Autoprefixer
+
+<img width="800" alt="Screenshot from 2025-08-07 13-04-17" src="https://github.com/user-attachments/assets/9ae74ae9-11cf-48d8-a10d-26a7d8c400ee" />
 
 ## Quick Start
 
