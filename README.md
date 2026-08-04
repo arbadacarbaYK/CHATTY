@@ -9,7 +9,7 @@ Local Bitcoin / Lightning / Nostr / Cashu tutor. Chat runs on **Ollama on your m
 
 - Node.js 18+
 - [Ollama](https://ollama.com) + model `llama3.2:3b` (or set `VITE_OLLAMA_MODEL`)
-- **Linux voice (spoken replies):** `espeak-ng` (`sudo apt install espeak-ng`) — browsers on Linux often have no TTS voices; CHATTY uses local espeak through the backend
+- **Linux spoken replies:** `espeak-ng` (`sudo apt install espeak-ng`) — used by the backend when the browser has no TTS voices
 - **Mic → text:** Chromium or Brave (Web Speech API). Firefox usually cannot do browser STT.
 
 ## Quick start
@@ -42,35 +42,27 @@ Open **http://localhost:5173**. Backend binds to **127.0.0.1 only**.
 
 <img width="800" alt="CHATTY start / skill selection" src="https://github.com/user-attachments/assets/9ae74ae9-11cf-48d8-a10d-26a7d8c400ee" />
 
-## Voice (why it failed before)
+## Voice
 
-Two separate bugs / limits:
+- **🎤** — talk-and-listen (mic + spoken reply)
+- **🔊** — spoken replies after typed chat
+- Spoken audio uses browser voices when available, otherwise local **espeak-ng** via `POST /tts`
 
-1. **Mic mode turned itself off before the reply**, so spoken answers never fired.
-2. **Chrome/Brave/Firefox on Linux often expose zero browser TTS voices** — installing system voices does not fix that. CHATTY now synthesizes WAV via **espeak-ng** on the backend (`POST /tts`).
+## Knowledge base
 
-Use **🎤** for talk-and-listen, or **🔊** for spoken replies after typed chat.
+Curated links are crawled into SQLite and searched with FTS. Chat pulls a few strong matches into the prompt when the question is on-topic.
 
-## Knowledge base — when it helps vs slows you down
-
-The KB is **optional context**, not a mandatory detour:
-
-- Chat **skips** the KB for short greetings and non-Bitcoin chit-chat.
-- Search times out after **~1.2s** — if the backend is slow, chat continues without it.
-- Only entries with **≥400 characters** of crawled text are injected (old 200-char teasers are ignored).
-- At most **3** sources × ~700 chars — so it shouldn't balloon Ollama prompt time.
-
-**Helpful when:** you ask about something in the seed list (Coldcard advisory, BIP-110 sides, Cashu/Nostr docs).  
-**Not helpful when:** the DB is full of tiny GitHub homepage scraps — use **Refresh Thin Knowledge** or recrawl curated links via `./scripts/seed-and-crawl.sh`.
-
-Curated seed file: [`knowledge-seed-links.txt`](knowledge-seed-links.txt).
-
+- Skips short greetings and off-topic chit-chat
+- Search gives up after ~1.2s so the reply is never blocked on a slow backend
+- Injects at most **3** sources with enough body text (≥400 characters), ~700 chars each
+- Seed / recrawl list: [`knowledge-seed-links.txt`](knowledge-seed-links.txt) · `./scripts/seed-and-crawl.sh`
+- Admin UI at **/input** (add links, crawl, refresh thin entries)
 
 ## Tests
 
 ```bash
 npm test
-# runs backend unit tests (content cleaning / FTS query helpers)
+# backend unit tests (content cleaning / FTS query helpers)
 ```
 
 ## Config
