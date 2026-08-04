@@ -2,6 +2,7 @@ import axios from 'axios';
 import { config } from '../config/appConfig';
 import { searchKnowledge } from './knowledgeService';
 import type { KnowledgeLink } from './knowledgeService';
+import { getSettings } from '../lib/userSettings';
 
 export interface ChatMessage {
   sender: 'user' | 'avatar';
@@ -81,7 +82,7 @@ export class ChatService {
     return `${url}/api`;
   }
 
-  public async checkHealth(): Promise<OllamaHealth> {
+  public async checkHealth(preferredModel?: string | null): Promise<OllamaHealth> {
     try {
       const healthResponse = await axios.get(`${this.ollamaBase()}/tags`, {
         timeout: 5000,
@@ -89,13 +90,15 @@ export class ChatService {
 
       this.healthStatus.isRunning = true;
       const models = healthResponse.data.models || [];
+      const wanted =
+        preferredModel || getSettings().defaultModel || config.ollama.model;
       const ourModel = models.find(
         (m: { name?: string }) =>
-          m.name === config.ollama.model || m.name?.startsWith(`${config.ollama.model}:`)
+          m.name === wanted || m.name?.startsWith(`${wanted}`)
       );
-
-      this.healthStatus.modelAvailable = !!ourModel;
-      this.healthStatus.modelName = config.ollama.model;
+      // Ready if preferred model exists, or any model is installed (user can switch)
+      this.healthStatus.modelAvailable = !!ourModel || models.length > 0;
+      this.healthStatus.modelName = ourModel?.name || models[0]?.name || wanted;
       this.healthStatus.error = undefined;
 
       return this.healthStatus;
@@ -116,7 +119,8 @@ export class ChatService {
   public async sendMessage(
     message: string,
     skillLevel: 'beginner' | 'intermediate' | 'advanced',
-    avatarName: string = 'Satoshe'
+    avatarName: string = 'Satoshe',
+    modelOverride?: string | null
   ): Promise<ChatResponse> {
     try {
       const userMessage: ChatMessage = {
@@ -164,10 +168,15 @@ ${conversationContext}
 
 ${avatarName}:`;
 
+      const model =
+        (modelOverride && modelOverride.trim()) ||
+        getSettings().defaultModel ||
+        config.ollama.model;
+
       const response = await axios.post(
         `${this.ollamaBase()}/generate`,
         {
-          model: config.ollama.model,
+          model,
           prompt: fullPrompt,
           stream: false,
           options: {

@@ -5,6 +5,8 @@ import { ChatService } from './services/chatService';
 import { config } from './config/appConfig';
 import './App.css';
 import KnowledgeAdmin from './components/KnowledgeAdmin';
+import { SettingsPanel } from './components/SettingsPanel';
+import { getSettings } from './lib/userSettings';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 
 type SkillLevel = 'beginner' | 'intermediate' | 'advanced';
@@ -50,7 +52,7 @@ function AppContent() {
         setWarmupStatus('Checking Ollama service...');
         
         const chatService = ChatService.getInstance();
-        const health = await chatService.checkHealth();
+        const health = await chatService.checkHealth(getSettings().defaultModel);
         
         if (!health.isRunning) {
           setWarmupStatus('Ollama service not running');
@@ -69,11 +71,14 @@ function AppContent() {
         const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minute timeout for warmup
         
         try {
-          const response = await fetch(`${config.ollama.url}/generate`, {
+          const model = getSettings().defaultModel || config.ollama.model;
+          const base = config.ollama.url.replace(/\/$/, '');
+          const api = base.endsWith('/api') || base === '/api' ? base : `${base}/api`;
+          const response = await fetch(`${api}/generate`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              model: config.ollama.model,
+              model,
               prompt: 'You are Satoshe, a friendly Bitcoin education guide. Please respond with a brief welcome message.',
               stream: false,
               options: {
@@ -273,12 +278,13 @@ function AppContent() {
             </button>
           </div>
           {showSettings && (
-            <div className="mt-4 p-3 bg-white/10 rounded-lg">
-              <div className="text-white text-sm">
-                <div className="mb-2">Skill Level: <span className="text-orange-400 capitalize">{skillLevel}</span></div>
-                <div className="text-white/60 text-xs">
-                  {getSkillLevelDescription(skillLevel)}
-                </div>
+            <div className="mt-4">
+              <SettingsPanel
+                compact
+                onClose={() => setShowSettings(false)}
+              />
+              <div className="mt-2 text-white/70 text-xs">
+                Skill: <span className="text-orange-400 capitalize">{skillLevel}</span>
               </div>
             </div>
           )}
@@ -312,7 +318,14 @@ function AppContent() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900 flex">
       {/* Header */}
-      <div className="absolute top-4 right-4 z-10">
+      <div className="absolute top-4 right-4 z-10 flex gap-2">
+        <Link
+          to="/settings"
+          className="bg-white/10 backdrop-blur-lg text-white p-2 rounded-lg hover:bg-white/20 transition-colors"
+          title="Settings"
+        >
+          ⚙️
+        </Link>
         <button
           onClick={handleBackToMenu}
           className="bg-white/10 backdrop-blur-lg text-white p-2 rounded-lg hover:bg-white/20 transition-colors"
@@ -350,22 +363,42 @@ function AppContent() {
   );
 }
 
+function SettingsPage() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900 p-6">
+      <div className="mb-4">
+        <Link to="/" className="text-orange-300 hover:text-orange-200 text-sm">
+          ← Back
+        </Link>
+      </div>
+      <SettingsPanel />
+    </div>
+  );
+}
+
 function App() {
   return (
     <Router>
       <div>
-        {/* TODO: Only show to admin */}
-        <div className="fixed top-4 left-4 z-50">
-          <Link 
-            to="/input" 
+        <div className="fixed top-4 left-4 z-50 flex gap-2">
+          <Link
+            to="/input"
             className="bg-white/10 backdrop-blur-lg text-white p-2 rounded-lg hover:bg-white/20 transition-colors"
             title="Knowledge Admin"
           >
             📚
           </Link>
+          <Link
+            to="/settings"
+            className="bg-white/10 backdrop-blur-lg text-white p-2 rounded-lg hover:bg-white/20 transition-colors"
+            title="Settings"
+          >
+            ⚙️
+          </Link>
         </div>
         <Routes>
           <Route path="/input" element={<KnowledgeAdmin />} />
+          <Route path="/settings" element={<SettingsPage />} />
           <Route path="/*" element={<AppContent />} />
         </Routes>
       </div>

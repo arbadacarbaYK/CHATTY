@@ -48,6 +48,12 @@ Open **http://localhost:5173**. Backend binds to **127.0.0.1 only**.
 - **🔊** — spoken replies after typed chat
 - Spoken audio uses browser voices when available, otherwise local **espeak-ng** via `POST /tts`
 
+## Models
+
+- **Settings** (`/settings` or ⚙️): choose the **default** Ollama model (tutor, lab-coder, unfiltered lab aliases, or anything you have pulled).
+- **Chat bar** (Cursor-style dropdown under the input): override the model **for this question** without changing the default.
+- Models come from local Ollama (`/api/tags`). Lab USB kit aliases (`lab-coder`, `lab-smart`, …) show up automatically when installed.
+
 ## Knowledge base
 
 Curated links are crawled into SQLite and searched with FTS. Chat pulls a few strong matches into the prompt when the question is on-topic.

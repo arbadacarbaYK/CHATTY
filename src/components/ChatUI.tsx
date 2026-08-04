@@ -3,6 +3,10 @@ import { useState, useEffect, useRef } from "react"
 import { ChatService } from "../services/chatService"
 import { ConnectionMonitor, type ConnectionEvent } from "../services/connectionMonitor"
 import { config } from "../config/appConfig"
+import { ModelPicker } from "./ModelPicker"
+import { MessageContent } from "./MessageContent"
+import { getSettings, subscribeSettings } from "../lib/userSettings"
+import { Link } from "react-router-dom"
 
 interface Message {
   sender: "user" | "avatar"
@@ -60,6 +64,7 @@ export const ChatUI: React.FC<ChatUIProps> = ({
   const [connectionStatus, setConnectionStatus] = useState<string>("Checking connections...")
   const [showConnectionAlert, setShowConnectionAlert] = useState(false)
   const [isSending, setIsSending] = useState(false)
+  const [selectedModel, setSelectedModel] = useState(() => getSettings().defaultModel)
 
   const recognitionRef = useRef<any>(null)
   const synthRef = useRef<SpeechSynthesis | null>(null)
@@ -90,7 +95,22 @@ export const ChatUI: React.FC<ChatUIProps> = ({
 
     connectionMonitor.addEventListener(handleConnectionEvent)
 
-    chatService.checkHealth().then((health) => {
+    const settings = getSettings()
+    setSelectedModel(settings.defaultModel)
+    if (settings.speakRepliesDefault) {
+      setAudioMode(true)
+      speakAfterReplyRef.current = true
+    }
+
+    let lastDefaultModel = settings.defaultModel
+    const unsub = subscribeSettings((s) => {
+      if (s.defaultModel !== lastDefaultModel) {
+        lastDefaultModel = s.defaultModel
+        setSelectedModel(s.defaultModel)
+      }
+    })
+
+    chatService.checkHealth(settings.defaultModel).then((health) => {
       setHealthStatus(health)
       setOllamaReady(health.isRunning && health.modelAvailable)
       setOllamaLoading(false)
@@ -108,6 +128,7 @@ export const ChatUI: React.FC<ChatUIProps> = ({
     checkLocalTts()
 
     return () => {
+      unsub()
       connectionMonitor.removeEventListener(handleConnectionEvent)
       connectionMonitor.stopMonitoring()
       stopSpeaking()
@@ -338,7 +359,12 @@ export const ChatUI: React.FC<ChatUIProps> = ({
     onReact?.()
 
     try {
-      const response = await chatService.sendMessage(text, skillLevel, avatarName)
+      const response = await chatService.sendMessage(
+        text,
+        skillLevel,
+        avatarName,
+        selectedModel
+      )
 
       if (!response.success) {
         let errorMessage =
@@ -587,9 +613,7 @@ export const ChatUI: React.FC<ChatUIProps> = ({
                       : "bg-black/20 text-orange-100 border border-orange-500/20"
                   }`}
                 >
-                  <div className="text-sm leading-relaxed whitespace-pre-wrap text-left">
-                    {message.text}
-                  </div>
+                  <MessageContent text={message.text} isUser={message.sender === "user"} />
                   {message.sources && message.sources.length > 0 && (
                     <div className="mt-2 text-xs text-orange-300/80 space-y-0.5">
                       <div className="opacity-70">Sources</div>
@@ -649,7 +673,7 @@ export const ChatUI: React.FC<ChatUIProps> = ({
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="flex-shrink-0 mt-4 p-4 bg-black/20 rounded-lg border border-orange-500/20">
+      <div className="flex-shrink-0 mt-4 p-3 bg-black/20 rounded-lg border border-orange-500/20">
         <form onSubmit={handleSubmit} className="flex flex-col gap-2">
           <textarea
             value={inputText}
@@ -660,19 +684,37 @@ export const ChatUI: React.FC<ChatUIProps> = ({
                 handleSend(inputText)
               }
             }}
-            placeholder="Ask about Bitcoin, Lightning, Cashu, or Nostr..."
+            placeholder="Ask about Bitcoin, Lightning, Cashu, Nostr — or request a code snippet…"
             className="w-full min-h-[64px] max-h-40 px-4 py-3 rounded-lg bg-black/30 text-orange-100 placeholder-orange-300/60 border border-orange-500/30 focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-400/20 resize-vertical text-base"
             disabled={isLoading || !ollamaReady}
             maxLength={config.ui.maxMessageLength}
             rows={3}
           />
-          <div className="flex flex-row gap-2 w-full justify-end">
+          <div className="flex flex-row items-center gap-2 w-full">
+            <ModelPicker
+              compact
+              value={selectedModel}
+              onChange={setSelectedModel}
+              disabled={isLoading}
+            />
+            <Link
+              to="/settings"
+              className="p-1.5 rounded-lg text-orange-300/80 hover:text-orange-200 hover:bg-white/5 text-sm"
+              title="Settings — defaults for model, voice, file edits"
+            >
+              ⚙️
+            </Link>
+            <div className="flex-1" />
+            <span className="text-[10px] text-orange-300/50 hidden sm:inline truncate max-w-[8rem]" title={selectedModel}>
+              this question
+            </span>
             <button
               type="submit"
               disabled={!inputText.trim() || isLoading || !ollamaReady}
-              className="px-4 py-2 rounded-lg transition-colors bg-gradient-to-r from-orange-500 to-yellow-500 text-white hover:from-orange-600 hover:to-yellow-600 disabled:bg-gray-500 disabled:cursor-not-allowed font-semibold flex items-center justify-center text-sm"
+              className="w-9 h-9 rounded-full transition-colors bg-gradient-to-r from-orange-500 to-yellow-500 text-white hover:from-orange-600 hover:to-yellow-600 disabled:bg-gray-500 disabled:cursor-not-allowed font-semibold flex items-center justify-center text-sm shrink-0"
+              title="Send"
             >
-              {isLoading ? "⏳" : "🚀"}
+              {isLoading ? "…" : "↑"}
             </button>
           </div>
         </form>
