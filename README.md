@@ -2,6 +2,9 @@
 
 Local Bitcoin / Lightning / Nostr / Cashu tutor. Chat runs on **Ollama on your machine**. Answers prefer your **curated link knowledge base** (crawled into SQLite). Nothing is meant to be exposed to the internet.
 
+<img width="800" alt="CHATTY avatar and chat UI" src="https://github.com/user-attachments/assets/5ef912ce-70e1-48e4-83a3-0fc7b345665e" />
+<img width="800" alt="CHATTY learning session" src="https://github.com/user-attachments/assets/6aac62bc-5f7e-4068-a785-6540d97fe5cd" />
+
 ## What you need
 
 - Node.js 18+
@@ -36,6 +39,8 @@ sudo apt install espeak-ng
 ```
 
 Open **http://localhost:5173**. Backend binds to **127.0.0.1 only**.
+
+<img width="800" alt="CHATTY start / skill selection" src="https://github.com/user-attachments/assets/9ae74ae9-11cf-48d8-a10d-26a7d8c400ee" />
 
 ## Voice (why it failed before)
 
