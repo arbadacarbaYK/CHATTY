@@ -1,20 +1,21 @@
 {
-  "name": "bitcoin-edu-roleplay",
+  "name": "chatty",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "start": "./start.sh"
+    "start": "./start.sh",
+    "test": "npm --prefix backend test",
+    "backend": "npm --prefix backend start"
   },
   "dependencies": {
     "@multiavatar/multiavatar": "^1.0.7",
     "@tailwindcss/postcss": "^4.1.11",
     "axios": "^1.10.0",
-    "puppeteer": "^24.15.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.7.1"

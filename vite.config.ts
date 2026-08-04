@@ -11,21 +11,22 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
         timeout: 600000, // 10 minutes timeout
-        configure: (proxy, options) => {
-          proxy.on('proxyReq', (proxyReq, req, res) => {
-            // Set longer timeout for generate requests
+        configure: (proxy) => {
+          proxy.on('proxyReq', (proxyReq, req) => {
             if (req.url?.includes('/generate')) {
               proxyReq.setHeader('Connection', 'keep-alive');
               proxyReq.setHeader('Keep-Alive', 'timeout=600');
             }
           });
-          proxy.on('error', (err, req, res) => {
-            // Proxy error handling
-          });
         }
       },
       '/knowledge': {
-        target: 'http://localhost:3000',
+        target: 'http://127.0.0.1:3000',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/tts': {
+        target: 'http://127.0.0.1:3000',
         changeOrigin: true,
         secure: false,
       }

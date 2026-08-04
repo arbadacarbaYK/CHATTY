@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { config } from '../config/appConfig';
 
 export interface KnowledgeLink {
   id?: number;
@@ -76,4 +75,10 @@ export const searchKnowledge = async (query: string): Promise<KnowledgeLink[]> =
     content: row.content,
     updatedAt: row.updatedAt,
   }));
+};
+
+/** Re-queue entries that were truncated to tiny teasers so Crawl All can refill them. */
+export const markThinKnowledgePending = async (): Promise<{ marked: number }> => {
+  const response = await axios.post(`${BASE_URL}/mark-thin-pending`);
+  return { marked: response.data.marked || 0 };
 }; 

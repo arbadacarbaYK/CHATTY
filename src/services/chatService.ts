@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { config } from '../config/appConfig';
-import { getAllKnowledge, searchKnowledge } from './knowledgeService';
+import { searchKnowledge } from './knowledgeService';
 import type { KnowledgeLink } from './knowledgeService';
 
 export interface ChatMessage {
@@ -13,6 +13,8 @@ export interface ChatResponse {
   response: string;
   success: boolean;
   error?: string;
+  sources?: Array<{ url: string; title?: string }>;
+  knowledgeMs?: number;
 }
 
 export interface OllamaHealth {
@@ -22,13 +24,44 @@ export interface OllamaHealth {
   error?: string;
 }
 
+/** Skip KB for chit-chat — search would only add latency. */
+function shouldQueryKnowledge(message: string): boolean {
+  const q = message.trim().toLowerCase();
+  if (q.length < 12) return false;
+  if (/^(hi|hello|hey|thanks|thank you|ok|okay|bye)\b/.test(q)) return false;
+  return /bitcoin|btc|lightning|ln |lnurl|nostr|cashu|ecash|wallet|coldcard|coinkite|bip|taproot|seed|entropy|soft\s*fork|op_return|node|relay|zap|nwc|fedimint|hardware|mnemonic|passphrase|utxo|mempool|knot|core\b|miner|mining|ordinal|inscription/i.test(
+    q
+  );
+}
+
+function excerptForPrompt(content: string, query: string, maxLen = 700): string {
+  if (!content) return '';
+  const cleaned = content.replace(/\s+/g, ' ').trim();
+  if (cleaned.length <= maxLen) return cleaned;
+
+  const words = query
+    .toLowerCase()
+    .split(/\s+/)
+    .filter((w) => w.length > 2);
+  const lower = cleaned.toLowerCase();
+  let bestIdx = -1;
+  for (const word of words) {
+    const idx = lower.indexOf(word);
+    if (idx >= 0 && (bestIdx < 0 || idx < bestIdx)) bestIdx = idx;
+  }
+  if (bestIdx < 0) return `${cleaned.slice(0, maxLen)}...`;
+  const start = Math.max(0, bestIdx - Math.floor(maxLen / 4));
+  const slice = cleaned.slice(start, start + maxLen);
+  return `${start > 0 ? '...' : ''}${slice}${start + maxLen < cleaned.length ? '...' : ''}`;
+}
+
 export class ChatService {
   private static instance: ChatService;
   private conversationHistory: ChatMessage[] = [];
   private healthStatus: OllamaHealth = {
     isRunning: false,
     modelAvailable: false,
-    modelName: config.ollama.model
+    modelName: config.ollama.model,
   };
 
   private constructor() {
@@ -42,30 +75,36 @@ export class ChatService {
     return ChatService.instance;
   }
 
+  private ollamaBase(): string {
+    const url = config.ollama.url.replace(/\/$/, '');
+    if (url.endsWith('/api') || url === '/api') return url;
+    return `${url}/api`;
+  }
+
   public async checkHealth(): Promise<OllamaHealth> {
     try {
-      // Check if Ollama is running
-      const healthResponse = await axios.get(`${config.ollama.url}/tags`, {
-        timeout: 5000
+      const healthResponse = await axios.get(`${this.ollamaBase()}/tags`, {
+        timeout: 5000,
       });
 
       this.healthStatus.isRunning = true;
-
-      // Check if our model is available
       const models = healthResponse.data.models || [];
-      const ourModel = models.find((m: any) => m.name === config.ollama.model);
-      
+      const ourModel = models.find(
+        (m: { name?: string }) =>
+          m.name === config.ollama.model || m.name?.startsWith(`${config.ollama.model}:`)
+      );
+
       this.healthStatus.modelAvailable = !!ourModel;
       this.healthStatus.modelName = config.ollama.model;
+      this.healthStatus.error = undefined;
 
       return this.healthStatus;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
       console.error('Ollama health check failed:', error);
-      
       this.healthStatus.isRunning = false;
       this.healthStatus.modelAvailable = false;
-      this.healthStatus.error = error.message;
-
+      this.healthStatus.error = message;
       return this.healthStatus;
     }
   }
@@ -80,42 +119,44 @@ export class ChatService {
     avatarName: string = 'Satoshe'
   ): Promise<ChatResponse> {
     try {
-      // Health check is now handled in the UI component on mount
-      // No need to check health before every message
-
-      // Add user message to history
-      const userMessage: ChatMessage = { 
-        sender: 'user', 
+      const userMessage: ChatMessage = {
+        sender: 'user',
         text: message,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
       this.conversationHistory.push(userMessage);
 
-      // Limit history length
       if (this.conversationHistory.length > config.chat.maxHistoryLength) {
-        this.conversationHistory = this.conversationHistory.slice(-config.chat.maxHistoryLength);
+        this.conversationHistory = this.conversationHistory.slice(
+          -config.chat.maxHistoryLength
+        );
       }
 
-      // Get relevant knowledge for this query
       let relevantKnowledge: KnowledgeLink[] = [];
+      let knowledgeMs = 0;
       try {
+        const t0 = performance.now();
         relevantKnowledge = await this.getRelevantKnowledge(message);
-        console.log(`Found ${relevantKnowledge.length} relevant knowledge sources for query: "${message}"`);
+        knowledgeMs = Math.round(performance.now() - t0);
+        console.log(
+          `Knowledge: ${relevantKnowledge.length} sources in ${knowledgeMs}ms for "${message.slice(0, 60)}"`
+        );
       } catch (error) {
         console.warn('Knowledge base query failed, continuing without context:', error);
-        // Continue without knowledge base if it fails
       }
 
-      // Create system prompt based on skill level
-      const systemPrompt = this.createSystemPrompt(skillLevel, relevantKnowledge, avatarName);
+      const systemPrompt = this.createSystemPrompt(
+        skillLevel,
+        relevantKnowledge,
+        avatarName,
+        message
+      );
 
-      // Prepare conversation context (last 2 messages to keep context manageable)
-      const recentMessages = this.conversationHistory.slice(-2);
+      const recentMessages = this.conversationHistory.slice(-8);
       const conversationContext = recentMessages
-        .map(msg => `${msg.sender === 'user' ? 'User' : avatarName}: ${msg.text}`)
+        .map((msg) => `${msg.sender === 'user' ? 'User' : avatarName}: ${msg.text}`)
         .join('\n');
 
-      // Create the full prompt for Ollama
       const fullPrompt = `${systemPrompt}
 
 Current conversation:
@@ -124,160 +165,143 @@ ${conversationContext}
 ${avatarName}:`;
 
       const response = await axios.post(
-        `${config.ollama.url}/generate`,
+        `${this.ollamaBase()}/generate`,
         {
           model: config.ollama.model,
           prompt: fullPrompt,
           stream: false,
           options: {
-            temperature: 0.7,
-            num_predict: 500, // Increased for complete responses
-            num_ctx: 2048, // Increased context for better responses
-            num_thread: 2, // Optimal for 4-core system
+            temperature: 0.5,
+            num_predict: 700,
+            num_ctx: relevantKnowledge.length > 0 ? 6144 : 4096,
+            num_thread: 4,
           },
         },
         {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          timeout: config.ollama.timeout, // Use config timeout
-          maxContentLength: Infinity, // Allow unlimited response size
-          maxBodyLength: Infinity // Allow unlimited response size
+          headers: { 'Content-Type': 'application/json' },
+          timeout: config.ollama.timeout,
+          maxContentLength: Infinity,
+          maxBodyLength: Infinity,
         }
       );
 
-      const responseText = response.data.response;
-      
-      // Add the avatar response to history
+      const responseText = String(response.data.response || '').trim();
       const avatarMessage: ChatMessage = {
         sender: 'avatar',
         text: responseText,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
       this.conversationHistory.push(avatarMessage);
 
       return {
         response: responseText,
-        success: true
+        success: true,
+        knowledgeMs,
+        sources: relevantKnowledge.slice(0, 3).map((k) => ({
+          url: k.url,
+        })),
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { code?: string; message?: string };
       console.error('Ollama API Error:', error);
-      
-      // Check if Ollama is not running
-      if (error.code === 'ECONNREFUSED' || error.message?.includes('connect')) {
+
+      if (err.code === 'ECONNREFUSED' || err.message?.includes('connect')) {
         return {
-          response: "I'm sorry, but I can't connect to my local AI service. Please make sure Ollama is installed and running. You can install it from https://ollama.ai and run 'ollama serve' to start the service.",
+          response:
+            "I can't reach the local AI (Ollama). Install from https://ollama.com, run `ollama serve`, then `ollama pull llama3.2:3b`.",
           success: false,
-          error: 'Connection refused'
+          error: 'Connection refused',
         };
       }
-      
-      // Check for timeout
-      if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+
+      if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
         return {
-          response: "I'm sorry, the AI model is taking longer than expected to respond. This usually happens on the first request as the model loads into memory. Please try again in a moment.",
+          response:
+            'The local model timed out (common on the first load). Wait a few seconds and try again.',
           success: false,
-          error: 'Timeout'
+          error: 'Timeout',
         };
       }
-      
-      // Check for model loading issues
-      if (error.message?.includes('model') || error.message?.includes('not found')) {
+
+      if (err.message?.includes('model') || err.message?.includes('not found')) {
         return {
-          response: "I'm sorry, the AI model is not available. Please make sure the model is downloaded by running 'ollama pull llama3.2:3b' in your terminal.",
+          response: `Model missing. Run: ollama pull ${config.ollama.model}`,
           success: false,
-          error: 'Model not found'
+          error: 'Model not found',
         };
       }
-      
+
       return {
-        response: "I'm sorry, I'm having trouble processing your request right now. Please try again in a moment.",
+        response: "I'm having trouble answering right now. Please try again.",
         success: false,
-        error: error.message
+        error: err.message,
       };
     }
   }
 
   private async getRelevantKnowledge(userQuery: string): Promise<KnowledgeLink[]> {
+    if (!shouldQueryKnowledge(userQuery)) {
+      return [];
+    }
+
     try {
-      // Add timeout to prevent hanging
+      const timeoutMs = 1200;
       const timeoutPromise = new Promise<KnowledgeLink[]>((_, reject) => {
-        setTimeout(() => reject(new Error('Knowledge base query timeout')), 5000);
+        setTimeout(() => reject(new Error('Knowledge base query timeout')), timeoutMs);
       });
-      
+
       const queryPromise = (async () => {
-        // Use the search endpoint for better relevance
         const searchResults = await searchKnowledge(userQuery);
-        
-        // If search returns results, use them
-        if (searchResults.length > 0) {
-          return searchResults.slice(0, 10); // Use top 10 most relevant sources
-        }
-        
-        // Fallback to client-side filtering if search returns no results
-        const allKnowledge = await getAllKnowledge();
-        const queryWords = userQuery.toLowerCase().split(/\s+/);
-        
-        // Simple relevance scoring based on tag matches
-        const relevantKnowledge = allKnowledge
-          .filter(knowledge => knowledge.status === 'crawled' && knowledge.tags.length > 0)
-          .map(knowledge => {
-            const matchingTags = knowledge.tags.filter(tag => 
-              queryWords.some(word => tag.toLowerCase().includes(word) || word.includes(tag.toLowerCase()))
-            );
-            const relevanceScore = matchingTags.length;
-            return { ...knowledge, relevanceScore };
-          })
-          .filter(knowledge => knowledge.relevanceScore > 0)
-          .sort((a, b) => b.relevanceScore - a.relevanceScore)
-          .slice(0, 10); // Use top 10 most relevant sources
-        
-        return relevantKnowledge;
+        return searchResults
+          .filter((k) => k.status === 'crawled' && (k.content?.length || 0) >= 400)
+          .slice(0, 3);
       })();
-      
+
       return await Promise.race([queryPromise, timeoutPromise]);
     } catch (error) {
-      console.error('Error fetching relevant knowledge:', error);
+      console.warn('Knowledge skipped (timeout or error):', error);
       return [];
     }
   }
 
-  private createSystemPrompt(skillLevel: 'beginner' | 'intermediate' | 'advanced', relevantKnowledge: KnowledgeLink[], avatarName: string): string {
-    const basePrompt = `You are ${avatarName}, a friendly and knowledgeable Bitcoin education guide. You have expertise in Bitcoin, Lightning Network, and Nostr. You should be encouraging, patient, and always educational. Keep responses conversational and engaging. Always stay in character as ${avatarName}.`;
+  private createSystemPrompt(
+    skillLevel: 'beginner' | 'intermediate' | 'advanced',
+    relevantKnowledge: KnowledgeLink[],
+    avatarName: string,
+    userQuery: string
+  ): string {
+    const basePrompt = `You are ${avatarName}, a careful local Bitcoin ecosystem tutor (Bitcoin, Lightning, Nostr, Cashu/ecash, related open-source tools).
 
-    // Add knowledge context if available
+Rules:
+- Prefer the LOCAL KNOWLEDGE excerpts below when they answer the question. Cite them as numbered sources like [1], [2].
+- Present contested topics (e.g. BIP-110, vendor incidents) as debates: what proponents claim, what critics claim, and what is still uncertain. Do not pick a tribe.
+- For security incidents (e.g. Coldcard entropy): stress official vendor guidance, that firmware updates do not fix old seeds, and never ask for seeds/keys.
+- If knowledge is missing or thin, say what you are unsure about. Do not invent product claims, URLs, or security guarantees.
+- Never ask for seed phrases, private keys, or nsecs. Never give personalized financial advice; educate only.
+- Stay in character as ${avatarName}. Be clear and encouraging.`;
+
     let knowledgeContext = '';
     if (relevantKnowledge.length > 0) {
-      knowledgeContext = '\n\nYou have access to a comprehensive knowledge base about Bitcoin and related technologies. Use this information to provide accurate, helpful recommendations. When users ask about specific tools, services, or technologies, consider their needs and preferences to provide personalized guidance.\n\n';
-      knowledgeContext += 'Available knowledge sources:\n';
+      knowledgeContext = '\n\nLOCAL KNOWLEDGE (use preferentially; keep quotes short):\n';
       relevantKnowledge.forEach((knowledge, index) => {
-        knowledgeContext += `${index + 1}. Source: ${knowledge.url}\n`;
-        knowledgeContext += `   Tags: ${knowledge.tags.join(', ')}\n`;
+        knowledgeContext += `[${index + 1}] ${knowledge.url}\n`;
         if (knowledge.content) {
-          // Clean up content: remove excessive whitespace, newlines, tabs, and duplicates
-          const cleanedContent = knowledge.content
-            .replace(/[\n\r\t]+/g, ' ') // Replace newlines, tabs with single space
-            .replace(/\s+/g, ' ') // Replace multiple spaces with single space
-            .trim()
-            // Remove consecutive duplicate words/phrases more precisely
-            .replace(/\b(\w+)\s+\1\b/g, '$1') // Remove consecutive duplicate words
-            .replace(/([^\s]+)\s+\1/g, '$1'); // Remove consecutive duplicate phrases
-          
-          // Include a preview of the cleaned content (first 300 characters for more context)
-          const contentPreview = cleanedContent.substring(0, 300);
-          if (contentPreview) {
-            knowledgeContext += `   Content: ${contentPreview}${cleanedContent.length > 300 ? '...' : ''}\n`;
-          }
+          knowledgeContext += `Excerpt: ${excerptForPrompt(knowledge.content, userQuery, 700)}\n`;
         }
         knowledgeContext += '\n';
       });
-      knowledgeContext += 'Use this knowledge to provide comprehensive, accurate recommendations. Consider user preferences and needs when making suggestions.\n';
+    } else {
+      knowledgeContext =
+        '\n\nLOCAL KNOWLEDGE: none matched (or skipped for speed). Answer carefully from general knowledge and say when you may be guessing.\n';
     }
 
     const skillPrompts = {
-      beginner: `${basePrompt}${knowledgeContext} The user is a beginner. Use simple language, avoid technical jargon, and provide clear explanations. Focus on fundamental concepts like what Bitcoin is, why it matters, and basic security practices. Use analogies and real-world examples. Keep responses under 200 words.`,
-      intermediate: `${basePrompt}${knowledgeContext} The user has some knowledge. You can use more technical terms but still explain them. Cover topics like Lightning Network, wallet types, transaction fees, and intermediate security concepts. Provide practical examples. Keep responses under 300 words.`,
-      advanced: `${basePrompt}${knowledgeContext} The user is advanced. You can dive deep into technical details, discuss advanced topics like Nostr, Lightning routing, privacy features, and complex Bitcoin concepts. Engage in technical discussions. Keep responses under 400 words.`
+      beginner: `${basePrompt}${knowledgeContext}
+Audience: beginner. Simple language, short analogies, avoid jargon (or explain it). Aim under ~180 words.`,
+      intermediate: `${basePrompt}${knowledgeContext}
+Audience: intermediate. Practical detail (wallets, fees, Lightning, relays) is OK. Aim under ~280 words.`,
+      advanced: `${basePrompt}${knowledgeContext}
+Audience: advanced. Technical depth OK (protocols, privacy tradeoffs, ops). Aim under ~400 words.`,
     };
 
     return skillPrompts[skillLevel];
@@ -294,4 +318,4 @@ ${avatarName}:`;
   public getHistoryLength(): number {
     return this.conversationHistory.length;
   }
-} 
+}

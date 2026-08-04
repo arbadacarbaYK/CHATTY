@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getAllKnowledge, addLink, crawlLink, removeLink } from '../services/knowledgeService';
+import { getAllKnowledge, addLink, crawlLink, removeLink, markThinKnowledgePending } from '../services/knowledgeService';
 import type { KnowledgeLink } from '../services/knowledgeService';
 import { Link } from 'react-router-dom';
 
@@ -99,6 +99,41 @@ const KnowledgeAdmin: React.FC = () => {
     }
   };
 
+  const handleRefreshThin = async () => {
+    setIsCrawling(true);
+    setError(null);
+    try {
+      const { marked } = await markThinKnowledgePending();
+      await loadLinks();
+      if (marked === 0) {
+        setError('No thin/truncated entries found — knowledge already has fuller text.');
+      } else {
+        // Immediately recrawl what we just marked
+        const all = await getAllKnowledge();
+        const toCrawl = all.filter(l => l.status === 'pending');
+        let successCount = 0;
+        let errorCount = 0;
+        for (const link of toCrawl) {
+          try {
+            await crawlLink(link.url);
+            successCount++;
+          } catch (e: any) {
+            console.error(`Failed to recrawl ${link.url}:`, e.message || e);
+            errorCount++;
+          }
+        }
+        await loadLinks();
+        setError(
+          `Refreshed thin entries: marked ${marked}, crawled ${successCount}, failed ${errorCount}.`
+        );
+      }
+    } catch (e: any) {
+      setError('Refresh thin knowledge failed: ' + (e.message || e));
+    } finally {
+      setIsCrawling(false);
+    }
+  };
+
   const handleRemove = async (url: string) => {
     setError(null);
     try {
@@ -118,7 +153,15 @@ const KnowledgeAdmin: React.FC = () => {
         </div>
         <h2 className="text-3xl font-bold text-white mb-6 text-center">Knowledge Base Admin</h2>
         {error && <div className="mb-4 text-red-400">{error}</div>}
-        <div className="mb-4 flex justify-end">
+        <div className="mb-4 flex flex-wrap justify-end gap-2">
+          <button
+            className="px-4 py-2 rounded-lg bg-gradient-to-r from-amber-500 to-orange-600 text-white font-semibold hover:from-amber-600 hover:to-orange-700 transition-all disabled:opacity-50"
+            onClick={handleRefreshThin}
+            disabled={isCrawling}
+            title="Old crawls only kept ~200 characters. This re-fetches full page text for those entries."
+          >
+            {isCrawling ? 'Working...' : 'Refresh Thin Knowledge'}
+          </button>
           <button
             className="px-4 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 text-white font-semibold hover:from-blue-600 hover:to-purple-600 transition-all disabled:opacity-50"
             onClick={handleCrawlAll}

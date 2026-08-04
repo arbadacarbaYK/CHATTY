@@ -22,10 +22,11 @@ app.set('port', port);
 var server = http.createServer(app);
 
 /**
- * Listen on provided port, on all network interfaces.
+ * Listen on localhost only (local Bitcoin tutor — not exposed to the LAN).
  */
 
-server.listen(port);
+const host = process.env.HOST || '127.0.0.1';
+server.listen(port, host);
 server.on('error', onError);
 server.on('listening', onListening);
 
@@ -85,6 +86,7 @@ function onListening() {
   var addr = server.address();
   var bind = typeof addr === 'string'
     ? 'pipe ' + addr
-    : 'port ' + addr.port;
+    : `${addr.address}:${addr.port}`;
+  console.log(`CHATTY backend listening on http://${bind} (localhost only)`);
   debug('Listening on ' + bind);
 }

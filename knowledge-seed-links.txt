@@ -1,0 +1,27 @@
+# Curated high-value links for CHATTY local knowledge (2026 topics people ask about).
+# Prefer primary sources + clear opposing writeups over aggregator spam.
+# Add with: ./scripts/seed-and-crawl.sh
+
+# --- Coldcard / Coinkite entropy advisory (Jul–Aug 2026) ---
+https://blog.coinkite.com/coldcard-mk3-seed-generation-warning/
+https://blog.coinkite.com/update-sunday/
+https://blog.coinkite.com/entropy-technical-backgrounder/
+https://coldcard.com/docs/
+https://coldcard.com/downloads
+
+# --- BIP-110 Reduced Data Temporary Softfork (both sides) ---
+https://github.com/bitcoin/bips/blob/master/bip-0110.mediawiki
+https://raw.githubusercontent.com/bitcoin/bips/master/bip-0110.mediawiki
+https://bip110.org/
+https://bip110monitor.com/
+https://blog.lopp.net/a-laymans-guide-to-bip-110/
+https://www.simplemining.io/insights/post/bip-110
+https://groups.google.com/g/bitcoindev/c/nOZim6FbuF8
+
+# --- Handy evergreen context people mix with the above ---
+https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki
+https://bitcoin.org/en/bitcoin-paper
+https://docs.lightning.engineering/
+https://docs.cashu.space/
+https://github.com/nostr-protocol/nips
+https://bitcoinops.org/
